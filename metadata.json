@@ -1,0 +1,5 @@
+{
+  "name": "TABELA TÁXI",
+  "description": "Um aplicativo para consultar uma tabela de preços de corridas de táxi e calcular o valor de viagens longas com base na origem e destino.",
+  "requestFramePermissions": []
+}
