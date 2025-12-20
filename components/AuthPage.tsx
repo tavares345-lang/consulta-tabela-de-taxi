@@ -62,7 +62,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 placeholder="E-mail ou 'Admin'"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-6 py-5 text-2xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-yellow-500/50"
+                className="w-full px-6 py-5 text-2xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-500/50"
                 required
             />
           </div>
@@ -72,7 +72,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 placeholder="Senha"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-6 py-5 text-2xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-yellow-500/50"
+                className="w-full px-6 py-5 text-2xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-500/50"
                 required
             />
           </div>
@@ -83,7 +83,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 placeholder="Confirmar Senha"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-6 py-5 text-2xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-yellow-500/50"
+                className="w-full px-6 py-5 text-2xl bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-xl text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-blue-500/50"
                 required
                 />
             </div>
@@ -94,7 +94,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
 
           <button
             type="submit"
-            className="w-full bg-yellow-500 text-gray-900 font-extrabold py-5 px-8 rounded-xl hover:bg-yellow-600 transition-colors duration-300 shadow-lg text-2xl uppercase tracking-wide"
+            className="w-full bg-blue-600 text-white font-extrabold py-5 px-8 rounded-xl hover:bg-blue-700 transition-colors duration-300 shadow-lg text-2xl uppercase tracking-wide"
           >
             {isLoginView ? 'Entrar' : 'Cadastrar'}
           </button>
@@ -107,7 +107,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
                 setError(null);
                 setSuccess(null);
             }}
-            className="text-xl text-yellow-600 hover:text-yellow-700 hover:underline font-semibold"
+            className="text-xl text-blue-600 hover:text-blue-700 hover:underline font-semibold"
           >
             {isLoginView ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
           </button>
