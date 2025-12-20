@@ -231,7 +231,6 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setSources([]);
 
         try {
-            // Tentamos melhorar a busca adicionando contexto se o usuário digitar algo curto
             const finalDest = destTrimmed.length < 15 && !destTrimmed.toLowerCase().includes(", mg") && !destTrimmed.toLowerCase().includes(", brasil") 
                 ? `${destTrimmed}, MG, Brasil` 
                 : destTrimmed;
@@ -256,88 +255,92 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         <div className="bg-transparent">
            {isModalOpen && <LongTripModal trip={editingTrip} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
            
-            <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-8 border-blue-500 overflow-hidden">
-                <div className="flex items-center mb-6">
-                    <CarIcon className="w-10 h-10 text-blue-500 mr-4" />
-                    <h2 className="text-3xl font-bold text-gray-800">Calculadora de Rota (IA)</h2>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <LocationAutocompleteInput 
-                        label="Origem"
-                        value={origin}
-                        onChange={setOrigin}
-                        placeholder="Ex: Aeroporto de Confins..."
-                    />
-                    <LocationAutocompleteInput 
-                        label="Destino"
-                        value={destination}
-                        onChange={setDestination}
-                        placeholder="Ex: Savassi, Belo Horizonte..."
-                    />
-                </div>
+            {/* Seção da Calculadora - Exibida apenas para Administradores */}
+            {isAdmin && (
+                <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-8 border-blue-500 overflow-hidden animate-in fade-in duration-500">
+                    <div className="flex items-center mb-6">
+                        <CarIcon className="w-10 h-10 text-blue-500 mr-4" />
+                        <h2 className="text-3xl font-bold text-gray-800">Calculadora de Rota</h2>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <LocationAutocompleteInput 
+                            label="Origem"
+                            value={origin}
+                            onChange={setOrigin}
+                            placeholder="Ex: Aeroporto de Confins..."
+                        />
+                        <LocationAutocompleteInput 
+                            label="Destino"
+                            value={destination}
+                            onChange={setDestination}
+                            placeholder="Ex: Savassi, Belo Horizonte..."
+                        />
+                    </div>
 
-                <div className="flex flex-col items-center">
-                    <button 
-                        onClick={handleCalculateRoute}
-                        disabled={isLoadingDistance}
-                        className={`w-full md:w-auto px-10 py-5 rounded-full text-2xl font-bold text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-                    >
-                        {isLoadingDistance ? (
-                          <>
-                            <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Consultando Google...
-                          </>
-                        ) : 'Calcular Valor'}
-                    </button>
+                    <div className="flex flex-col items-center">
+                        <button 
+                            onClick={handleCalculateRoute}
+                            disabled={isLoadingDistance}
+                            className={`w-full md:w-auto px-10 py-5 rounded-full text-2xl font-bold text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        >
+                            {isLoadingDistance ? (
+                              <>
+                                <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Consultando Google...
+                              </>
+                            ) : 'Calcular Valor'}
+                        </button>
 
-                    {distanceError && (
-                        <div className="mt-6 w-full p-6 bg-red-50 border-2 border-red-100 rounded-xl">
-                          <p className="text-red-600 text-xl font-bold text-center leading-relaxed">{distanceError}</p>
-                        </div>
-                    )}
-
-                    {calculatedDistance !== null && (
-                        <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-4 duration-500">
-                            <div className="flex flex-col md:flex-row justify-around items-center gap-6">
-                                <div className="text-center">
-                                    <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Distância Encontrada</p>
-                                    <p className="text-5xl font-extrabold text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} km</p>
-                                </div>
-                                <div className="hidden md:block w-px h-16 bg-blue-200"></div>
-                                <div className="text-center">
-                                    <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Valor Estimado</p>
-                                    <p className="text-6xl font-extrabold text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
-                                </div>
+                        {distanceError && (
+                            <div className="mt-6 w-full p-6 bg-red-50 border-2 border-red-100 rounded-xl">
+                              <p className="text-red-600 text-xl font-bold text-center leading-relaxed">{distanceError}</p>
                             </div>
-                            
-                            {sources.length > 0 && (
-                              <div className="mt-8 pt-6 border-t border-blue-200">
-                                <p className="text-sm font-bold text-blue-800 mb-3 uppercase tracking-widest flex items-center">
-                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                                  Referências da Pesquisa:
-                                </p>
-                                <ul className="flex flex-wrap gap-x-3 gap-y-2">
-                                  {sources.map((source, idx) => (
-                                    <li key={idx} className="flex items-center">
-                                      <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-900 bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm transition-all hover:shadow flex items-center">
-                                        {source.title.length > 35 ? source.title.substring(0, 35) + '...' : source.title}
-                                      </a>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+                        )}
 
+                        {calculatedDistance !== null && (
+                            <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-4 duration-500">
+                                <div className="flex flex-col md:flex-row justify-around items-center gap-6">
+                                    <div className="text-center">
+                                        <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Distância Encontrada</p>
+                                        <p className="text-5xl font-extrabold text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} km</p>
+                                    </div>
+                                    <div className="hidden md:block w-px h-16 bg-blue-200"></div>
+                                    <div className="text-center">
+                                        <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Valor Estimado</p>
+                                        <p className="text-6xl font-extrabold text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                                    </div>
+                                </div>
+                                
+                                {sources.length > 0 && (
+                                  <div className="mt-8 pt-6 border-t border-blue-200">
+                                    <p className="text-sm font-bold text-blue-800 mb-3 uppercase tracking-widest flex items-center">
+                                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                      Referências da Pesquisa:
+                                    </p>
+                                    <ul className="flex flex-wrap gap-x-3 gap-y-2">
+                                      {sources.map((source, idx) => (
+                                        <li key={idx} className="flex items-center">
+                                          <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-900 bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm transition-all hover:shadow flex items-center">
+                                            {source.title.length > 35 ? source.title.substring(0, 35) + '...' : source.title}
+                                          </a>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Tabela Fixa - Visível para todos os usuários */}
             <div className="flex flex-col xl:flex-row justify-between items-center mb-8 gap-6 p-8 bg-white rounded-xl shadow-md">
-                <h2 className="text-4xl font-bold text-gray-800 shrink-0">Tabela Fixa</h2>
+                <h2 className="text-4xl font-bold text-gray-800 shrink-0">Tabela de Viagens Longas</h2>
                 <div className="w-full xl:w-auto flex flex-col xl:flex-row items-center gap-5">
                     <input
                         type="text"
