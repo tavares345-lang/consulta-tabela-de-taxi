@@ -103,7 +103,7 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 placeholder={placeholder}
-                className="w-full pl-12 pr-4 py-4 text-xl border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="w-full pl-12 pr-4 py-4 text-xl border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
                 autoComplete="off"
                 inputMode="search"
             />
@@ -117,7 +117,7 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
                             key={index}
                             onMouseDown={(e) => { e.preventDefault(); handleSelect(suggestion); }}
                             onTouchStart={(e) => { e.preventDefault(); handleSelect(suggestion); }}
-                            className="px-4 py-4 hover:bg-blue-50 cursor-pointer text-lg text-gray-700 border-b last:border-b-0 border-gray-100 flex items-center active:bg-blue-100"
+                            className="px-4 py-4 hover:bg-blue-50 cursor-pointer text-lg text-gray-700 border-b last:border-b-0 border-gray-100 flex items-center active:bg-blue-100 transition-colors"
                         >
                             <MapPinIcon className="w-5 h-5 mr-3 text-gray-400" />
                             {suggestion}
@@ -169,7 +169,7 @@ const LongTripModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4 backdrop-blur-sm">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
         <h2 className="text-3xl font-bold mb-6">{trip ? 'Editar Viagem' : 'Adicionar Nova Viagem'}</h2>
         <form onSubmit={handleSubmit}>
@@ -235,10 +235,10 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                 setCalculatedDistance(result.distance);
                 setSources(result.sources);
             } else {
-                setDistanceError("Não foi possível localizar este destino. Tente ser mais específico, incluindo a cidade ou ponto de referência.");
+                setDistanceError("A IA não conseguiu confirmar esta distância. Tente adicionar o nome da cidade ou estado ao destino (Ex: 'Ipatinga, MG').");
             }
         } catch (error) {
-            setDistanceError("Ocorreu um erro ao calcular a rota. Verifique sua conexão e tente novamente.");
+            setDistanceError("Ocorreu um erro ao conectar com o serviço de mapas. Verifique sua conexão.");
         } finally {
             setIsLoadingDistance(false);
         }
@@ -248,7 +248,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         <div className="bg-transparent">
            {isModalOpen && <LongTripModal trip={editingTrip} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
            
-            <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-8 border-blue-500">
+            <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-8 border-blue-500 overflow-hidden">
                 <div className="flex items-center mb-6">
                     <CarIcon className="w-10 h-10 text-blue-500 mr-4" />
                     <h2 className="text-3xl font-bold text-gray-800">Calculadora de Rota (IA)</h2>
@@ -273,17 +273,27 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                     <button 
                         onClick={handleCalculateRoute}
                         disabled={isLoadingDistance}
-                        className={`w-full md:w-auto px-10 py-5 rounded-full text-2xl font-bold text-white transition-all shadow-lg active:scale-95 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        className={`w-full md:w-auto px-10 py-5 rounded-full text-2xl font-bold text-white transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        {isLoadingDistance ? 'Localizando Destino...' : 'Calcular Valor'}
+                        {isLoadingDistance ? (
+                          <>
+                            <svg className="animate-spin h-8 w-8 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Pesquisando Rota...
+                          </>
+                        ) : 'Calcular Valor'}
                     </button>
 
                     {distanceError && (
-                        <p className="mt-6 text-red-500 text-xl font-bold text-center bg-red-50 p-4 rounded-lg w-full">{distanceError}</p>
+                        <div className="mt-6 w-full p-4 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-600 text-xl font-bold text-center">{distanceError}</p>
+                        </div>
                     )}
 
                     {calculatedDistance !== null && (
-                        <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100">
+                        <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-4 duration-500">
                             <div className="flex flex-col md:flex-row justify-around items-center gap-6">
                                 <div className="text-center">
                                     <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Distância Rodoviária</p>
@@ -298,12 +308,13 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                             
                             {sources.length > 0 && (
                               <div className="mt-6 pt-4 border-t border-blue-200">
-                                <p className="text-sm font-bold text-blue-800 mb-2">Fontes de Pesquisa:</p>
-                                <ul className="flex flex-wrap gap-x-4 gap-y-1">
+                                <p className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-widest">Fontes de Pesquisa (Grounding):</p>
+                                <ul className="flex flex-wrap gap-x-4 gap-y-2">
                                   {sources.map((source, idx) => (
-                                    <li key={idx}>
-                                      <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
-                                        • {source.title}
+                                    <li key={idx} className="flex items-center">
+                                      <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center bg-white px-2 py-1 rounded border border-blue-100 shadow-sm transition-all">
+                                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"></path><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"></path></svg>
+                                        {source.title.length > 30 ? source.title.substring(0, 30) + '...' : source.title}
                                       </a>
                                     </li>
                                   ))}
