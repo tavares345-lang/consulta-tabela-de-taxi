@@ -3,31 +3,34 @@ import { GoogleGenAI } from "@google/genai";
 import type { DistanceResult } from "../types";
 
 /**
- * Extrai o valor numérico de uma string, procurando por padrões como "VALOR: 217" ou "217 km"
+ * Extrai o valor numérico de uma string de forma extremamente agressiva.
  */
 const extractDistance = (text: string | undefined): number | null => {
   if (!text) return null;
   
-  // Remove formatação comum e substitui vírgula por ponto
-  const cleaned = text.replace(/\s+/g, ' ').replace(',', '.');
+  // Normaliza o texto: remove espaços extras, troca vírgula por ponto
+  const normalized = text.replace(/\s+/g, ' ').replace(',', '.');
   
-  // Tenta encontrar o padrão VALOR: X.X primeiro (mais preciso)
-  const explicitMatch = cleaned.match(/VALOR:\s*(\d+(\.\d+)?)/i);
-  if (explicitMatch) {
-    return parseFloat(explicitMatch[1]);
-  }
+  // 1. Procura por um padrão explícito definido no prompt
+  const explicitMatch = normalized.match(/RESULT_KM:\s*(\d+(\.\d+)?)/i);
+  if (explicitMatch) return parseFloat(explicitMatch[1]);
 
-  // Fallback: procura por qualquer número seguido ou precedido por indicadores de distância
-  const distanceMatch = cleaned.match(/(\d+(\.\d+)?)\s*(km|quilômetros|quilometros)/i);
-  if (distanceMatch) {
-    return parseFloat(distanceMatch[1]);
-  }
+  // 2. Procura por "X km" ou "X quilômetros"
+  const kmMatch = normalized.match(/(\d+(\.\d+)?)\s*(km|quil[ôo]metros)/i);
+  if (kmMatch) return parseFloat(kmMatch[1]);
 
-  // Última tentativa: pega o primeiro número que aparecer
-  const firstNumMatch = cleaned.match(/(\d+(\.\d+)?)/);
-  if (firstNumMatch) {
-    const val = parseFloat(firstNumMatch[0]);
-    return val > 0 ? val : null;
+  // 3. Procura por qualquer número que pareça uma distância razoável (evitando anos ou números pequenos demais)
+  // Tentamos pegar o número mais "isolado" ou proeminente
+  const allNumbers = normalized.match(/(\d+(\.\d+)?)/g);
+  if (allNumbers) {
+    // Filtramos números que podem ser anos (1900-2100) ou muito pequenos, 
+    // a menos que seja o único número
+    const candidates = allNumbers.map(n => parseFloat(n)).filter(n => n > 0);
+    if (candidates.length > 0) {
+      // Se houver "RESULT_KM" no texto original mas o regex falhou, o número pode estar lá
+      // Caso contrário, pegamos o primeiro número > 0
+      return candidates[0];
+    }
   }
 
   return null;
@@ -36,42 +39,49 @@ const extractDistance = (text: string | undefined): number | null => {
 export const getDistance = async (origin: string, destination: string): Promise<DistanceResult> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    console.error("Erro: API_KEY não configurada no ambiente.");
+    console.error("Erro: API_KEY não encontrada.");
     return { distance: null, sources: [] };
   }
 
   const ai = new GoogleGenAI({ apiKey });
   const modelName = 'gemini-3-flash-preview';
 
-  const systemInstruction = `Você é um especialista em logística e geografia de Minas Gerais, Brasil. 
-Sua tarefa é fornecer a distância rodoviária exata entre dois pontos. 
-Sempre formate sua resposta final iniciando com "VALOR: " seguido apenas do número em km.`;
+  // Adicionamos "Brasil" para garantir que o Google Search foque na região correta
+  const queryOrigin = origin.toLowerCase().includes("brasil") ? origin : `${origin}, Brasil`;
+  const queryDest = destination.toLowerCase().includes("brasil") ? destination : `${destination}, Brasil`;
 
-  const userPrompt = `Calcule a distância rodoviária aproximada entre "${origin}" e "${destination}".
-Considere que ambos os locais estão em Minas Gerais ou estados vizinhos.
-Se o destino for uma cidade, considere o centro dela.
-Responda no formato: VALOR: [número]`;
+  const prompt = `Instructions:
+1. Use Google Search to find the road distance between "${queryOrigin}" and "${queryDest}".
+2. Look for the shortest or most common driving route.
+3. Your output MUST end with the string "RESULT_KM: [number]" where [number] is the distance in kilometers.
+4. If you find multiple distances, use the one for cars/taxis.
+
+Context: Taxi trip in Minas Gerais, Brazil.
+Format:
+Reasoning: [your thought process]
+RESULT_KM: [number]`;
 
   try {
-    console.log(`[Gemini] Iniciando busca de rota: ${origin} -> ${destination}`);
-    
-    // TENTATIVA 1: Com Google Search e Thinking
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: userPrompt,
+      contents: prompt,
       config: {
-        systemInstruction,
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 2000 },
-        temperature: 0.1,
+        // Usamos um budget de pensamento maior para garantir que ele processe os resultados da busca
+        thinkingConfig: { thinkingBudget: 4000 },
+        temperature: 0.2,
       },
     });
 
-    let distance = extractDistance(response.text);
-    const sources: { title: string; uri: string }[] = [];
+    const textOutput = response.text;
+    console.log("[Gemini Response]:", textOutput);
     
-    // Extrair fontes de fundamentação
-    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    const distance = extractDistance(textOutput);
+    
+    const sources: { title: string; uri: string }[] = [];
+    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
+    const groundingChunks = groundingMetadata?.groundingChunks;
+    
     if (groundingChunks) {
       groundingChunks.forEach((chunk: any) => {
         if (chunk.web?.uri && chunk.web?.title) {
@@ -80,31 +90,22 @@ Responda no formato: VALOR: [número]`;
       });
     }
 
-    if (distance !== null) {
-      console.log(`[Gemini] Sucesso na busca: ${distance}km`);
-      return { distance, sources };
+    // Se falhou com search, tentamos uma última vez sem search (conhecimento interno do modelo)
+    if (distance === null) {
+      console.warn("[Gemini] Falha ao extrair distância com busca. Tentando conhecimento interno...");
+      const fallbackResponse = await ai.models.generateContent({
+        model: modelName,
+        contents: `Qual a distância rodoviária aproximada entre ${origin} e ${destination} em Minas Gerais? Responda apenas o número em km.`,
+        config: { temperature: 0 }
+      });
+      const fallbackDistance = extractDistance(fallbackResponse.text);
+      return { distance: fallbackDistance, sources };
     }
 
-    // TENTATIVA 2: Fallback sem Search (Conhecimento Interno) se a busca falhou
-    console.log("[Gemini] Fallback: Tentando sem ferramentas de busca...");
-    const fallbackResponse = await ai.models.generateContent({
-      model: modelName,
-      contents: userPrompt,
-      config: {
-        systemInstruction,
-        temperature: 0,
-      },
-    });
-
-    distance = extractDistance(fallbackResponse.text);
-    if (distance !== null) {
-      console.log(`[Gemini] Sucesso no fallback: ${distance}km`);
-      return { distance, sources: [] };
-    }
+    return { distance, sources };
 
   } catch (error) {
-    console.error("Erro crítico na API Gemini:", error);
+    console.error("Erro no getDistance:", error);
+    return { distance: null, sources: [] };
   }
-
-  return { distance: null, sources: [] };
 };

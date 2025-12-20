@@ -219,7 +219,8 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     };
 
     const handleCalculateRoute = async () => {
-        if (!origin.trim() || !destination.trim()) {
+        const destTrimmed = destination.trim();
+        if (!origin.trim() || !destTrimmed) {
             setDistanceError("Por favor, preencha a origem e o destino.");
             return;
         }
@@ -230,15 +231,22 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setSources([]);
 
         try {
-            const result: DistanceResult = await getDistance(origin, destination);
-            if (result.distance !== null) {
+            // Tentamos melhorar a busca adicionando contexto se o usuário digitar algo curto
+            const finalDest = destTrimmed.length < 15 && !destTrimmed.toLowerCase().includes(", mg") && !destTrimmed.toLowerCase().includes(", brasil") 
+                ? `${destTrimmed}, MG, Brasil` 
+                : destTrimmed;
+
+            const result: DistanceResult = await getDistance(origin, finalDest);
+            
+            if (result.distance !== null && result.distance > 0) {
                 setCalculatedDistance(result.distance);
                 setSources(result.sources);
             } else {
-                setDistanceError("A IA não conseguiu confirmar esta distância. Tente adicionar o nome da cidade ou estado ao destino (Ex: 'Ipatinga, MG').");
+                setDistanceError("Não conseguimos calcular a distância exata. Tente ser mais específico, ex: 'Rodoviária de Ipatinga' ou 'Centro, Ipatinga, MG'.");
             }
         } catch (error) {
-            setDistanceError("Ocorreu um erro ao conectar com o serviço de mapas. Verifique sua conexão.");
+            console.error(error);
+            setDistanceError("Erro ao processar a requisição. Verifique sua conexão ou tente novamente mais tarde.");
         } finally {
             setIsLoadingDistance(false);
         }
@@ -281,14 +289,14 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
-                            Pesquisando Rota...
+                            Consultando Google...
                           </>
                         ) : 'Calcular Valor'}
                     </button>
 
                     {distanceError && (
-                        <div className="mt-6 w-full p-4 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-red-600 text-xl font-bold text-center">{distanceError}</p>
+                        <div className="mt-6 w-full p-6 bg-red-50 border-2 border-red-100 rounded-xl">
+                          <p className="text-red-600 text-xl font-bold text-center leading-relaxed">{distanceError}</p>
                         </div>
                     )}
 
@@ -296,25 +304,27 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                         <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100 animate-in fade-in slide-in-from-top-4 duration-500">
                             <div className="flex flex-col md:flex-row justify-around items-center gap-6">
                                 <div className="text-center">
-                                    <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Distância Rodoviária</p>
-                                    <p className="text-4xl font-extrabold text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} km</p>
+                                    <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Distância Encontrada</p>
+                                    <p className="text-5xl font-extrabold text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} km</p>
                                 </div>
                                 <div className="hidden md:block w-px h-16 bg-blue-200"></div>
                                 <div className="text-center">
                                     <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Valor Estimado</p>
-                                    <p className="text-5xl font-extrabold text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                                    <p className="text-6xl font-extrabold text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
                                 </div>
                             </div>
                             
                             {sources.length > 0 && (
-                              <div className="mt-6 pt-4 border-t border-blue-200">
-                                <p className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-widest">Fontes de Pesquisa (Grounding):</p>
-                                <ul className="flex flex-wrap gap-x-4 gap-y-2">
+                              <div className="mt-8 pt-6 border-t border-blue-200">
+                                <p className="text-sm font-bold text-blue-800 mb-3 uppercase tracking-widest flex items-center">
+                                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                  Referências da Pesquisa:
+                                </p>
+                                <ul className="flex flex-wrap gap-x-3 gap-y-2">
                                   {sources.map((source, idx) => (
                                     <li key={idx} className="flex items-center">
-                                      <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800 hover:underline flex items-center bg-white px-2 py-1 rounded border border-blue-100 shadow-sm transition-all">
-                                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z"></path><path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z"></path></svg>
-                                        {source.title.length > 30 ? source.title.substring(0, 30) + '...' : source.title}
+                                      <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-900 bg-white px-3 py-1.5 rounded-full border border-blue-100 shadow-sm transition-all hover:shadow flex items-center">
+                                        {source.title.length > 35 ? source.title.substring(0, 35) + '...' : source.title}
                                       </a>
                                     </li>
                                   ))}
