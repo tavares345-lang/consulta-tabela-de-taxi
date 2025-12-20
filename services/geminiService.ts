@@ -30,58 +30,62 @@ export const getDistance = async (origin: string, destination: string): Promise<
   const apiKey = getApiKey();
   
   if (!apiKey) {
-    console.error("Gemini API Key não encontrada em process.env.API_KEY. O cálculo de rota será desabilitado.");
+    console.warn("API_KEY não disponível.");
     return null;
   }
 
-  // Modelo recomendado para tarefas de texto/busca
+  // Usando gemini-3-flash-preview para melhor performance e custo
   const modelName = 'gemini-3-flash-preview';
   
-  const basePrompt = `Tarefa: Calcular a distância de carro (em km) entre "${origin}" e "${destination}".
-  Contexto: Minas Gerais, Brasil.
+  const basePrompt = `Calcule a distância rodoviária exata de carro entre "${origin}" e "${destination}" em Minas Gerais, Brasil.
   
-  Instruções Críticas:
-  1. O objetivo é obter um valor numérico para cálculo de frete.
-  2. Se houver ambiguidade no nome da cidade, assuma que é em Minas Gerais (Brasil).
-  3. Se não encontrar um endereço exato, use o centro da cidade ou ponto de referência.
-  4. PRIORIDADE: Retorne APENAS o número (ex: 150.5). Sem texto adicional, sem unidade "km".`;
+  IMPORTANTE:
+  - Se um local não for encontrado, tente o centro da cidade correspondente.
+  - Retorne APENAS o número da distância em km (ex: 45.3).
+  - NUNCA retorne texto, explicações ou avisos. Apenas o número puro.`;
 
-  // Tentativa 1: Usar Google Search (Maior precisão para rotas reais)
+  // Tentativa 1: Google Search
   try {
+    console.log(`Buscando distância via Gemini Search: ${origin} -> ${destination}`);
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: basePrompt + "\nUse o Google Search para encontrar a distância rodoviária exata e atualizada.",
+      contents: basePrompt + "\nUse a ferramenta de busca do Google para confirmar a distância oficial.",
       config: {
         tools: [{ googleSearch: {} }],
-        temperature: 0.1,
+        temperature: 0,
       },
     });
     
     const distance = extractDistance(response.text?.trim());
-    if (distance) return distance;
+    if (distance) {
+        console.log(`Distância obtida via Search: ${distance}km`);
+        return distance;
+    }
 
   } catch (error: any) {
-    console.warn("Aviso: Falha ao usar Google Search para distância. Tentando fallback interno.", error);
+    console.warn("Falha na tentativa 1 (Search):", error?.message || error);
   }
 
-  // Tentativa 2: Fallback para o conhecimento geográfico interno do modelo
+  // Tentativa 2: Fallback (Conhecimento Interno)
   try {
+      console.log("Tentando fallback via conhecimento geográfico interno...");
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: modelName,
-        contents: basePrompt + "\nEstime a distância rodoviária aproximada com base no seu conhecimento de mapas e rotas de Minas Gerais.",
+        contents: basePrompt + "\nUtilize seu conhecimento interno sobre a malha rodoviária de Minas Gerais.",
         config: {
-            temperature: 0.1,
+            temperature: 0,
         },
       });
 
       const distance = extractDistance(response.text?.trim());
-      if (distance) return distance;
-      
-      console.error("Não foi possível extrair um número válido da resposta do Gemini:", response.text);
+      if (distance) {
+          console.log(`Distância obtida via Fallback: ${distance}km`);
+          return distance;
+      }
   } catch (error) {
-      console.error("Erro fatal ao chamar a API Gemini:", error);
+      console.error("Erro total na API Gemini:", error);
   }
 
   return null;
