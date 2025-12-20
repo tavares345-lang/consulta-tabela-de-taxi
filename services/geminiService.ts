@@ -1,92 +1,65 @@
 
 import { GoogleGenAI } from "@google/genai";
-
-/**
- * Função segura para obter a chave de API sem quebrar a execução global
- */
-const getApiKey = () => {
-  try {
-    return process.env.API_KEY;
-  } catch (e) {
-    return undefined;
-  }
-};
+import type { DistanceResult } from "../types";
 
 const extractDistance = (text: string | undefined): number | null => {
-    if (!text) return null;
-    const sanitizedText = text.replace(',', '.');
-    // Busca o primeiro número na resposta
-    const distanceMatch = sanitizedText.match(/(\d+(\.\d+)?)/);
-    if (distanceMatch) {
-        const distance = parseFloat(distanceMatch[0]);
-        if (!isNaN(distance) && distance > 0) {
-            return distance;
-        }
-    }
-    return null;
+  if (!text) return null;
+  const sanitizedText = text.replace(',', '.');
+  const distanceMatch = sanitizedText.match(/(\d+(\.\d+)?)/);
+  if (distanceMatch) {
+    const distance = parseFloat(distanceMatch[0]);
+    return !isNaN(distance) && distance > 0 ? distance : null;
+  }
+  return null;
 };
 
-export const getDistance = async (origin: string, destination: string): Promise<number | null> => {
-  const apiKey = getApiKey();
-  
+export const getDistance = async (origin: string, destination: string): Promise<DistanceResult> => {
+  const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    console.warn("API_KEY não disponível.");
-    return null;
+    return { distance: null, sources: [] };
   }
 
-  // Usando gemini-3-flash-preview para melhor performance e custo
+  const ai = new GoogleGenAI({ apiKey });
   const modelName = 'gemini-3-flash-preview';
-  
-  const basePrompt = `Calcule a distância rodoviária exata de carro entre "${origin}" e "${destination}" em Minas Gerais, Brasil.
-  
-  IMPORTANTE:
-  - Se um local não for encontrado, tente o centro da cidade correspondente.
-  - Retorne APENAS o número da distância em km (ex: 45.3).
-  - NUNCA retorne texto, explicações ou avisos. Apenas o número puro.`;
 
-  // Tentativa 1: Google Search
+  const basePrompt = `Tarefa: Calcular a distância rodoviária (em km) para uma viagem de táxi.
+Origem: "${origin}"
+Destino: "${destination}"
+Contexto: Região Metropolitana de Belo Horizonte e interior de Minas Gerais, Brasil.
+
+Instruções:
+1. Use o Google Search para encontrar a distância rodoviária mais provável entre esses dois pontos.
+2. Retorne APENAS o número da distância (ex: 42.5). Não inclua km ou textos adicionais.
+3. Se o destino for um bairro ou hotel, considere o endereço exato em Minas Gerais.`;
+
   try {
-    console.log(`Buscando distância via Gemini Search: ${origin} -> ${destination}`);
-    const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: modelName,
-      contents: basePrompt + "\nUse a ferramenta de busca do Google para confirmar a distância oficial.",
+      contents: basePrompt,
       config: {
         tools: [{ googleSearch: {} }],
         temperature: 0,
       },
     });
-    
+
     const distance = extractDistance(response.text?.trim());
-    if (distance) {
-        console.log(`Distância obtida via Search: ${distance}km`);
-        return distance;
+    
+    // Extrair fontes de fundamentação (Obrigatório conforme diretrizes)
+    const sources: { title: string; uri: string }[] = [];
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+    
+    if (groundingChunks) {
+      groundingChunks.forEach((chunk: any) => {
+        if (chunk.web?.uri && chunk.web?.title) {
+          sources.push({ title: chunk.web.title, uri: chunk.web.uri });
+        }
+      });
     }
 
-  } catch (error: any) {
-    console.warn("Falha na tentativa 1 (Search):", error?.message || error);
-  }
+    return { distance, sources };
 
-  // Tentativa 2: Fallback (Conhecimento Interno)
-  try {
-      console.log("Tentando fallback via conhecimento geográfico interno...");
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: modelName,
-        contents: basePrompt + "\nUtilize seu conhecimento interno sobre a malha rodoviária de Minas Gerais.",
-        config: {
-            temperature: 0,
-        },
-      });
-
-      const distance = extractDistance(response.text?.trim());
-      if (distance) {
-          console.log(`Distância obtida via Fallback: ${distance}km`);
-          return distance;
-      }
   } catch (error) {
-      console.error("Erro total na API Gemini:", error);
+    console.error("Erro na busca de distância Gemini:", error);
+    return { distance: null, sources: [] };
   }
-
-  return null;
 };

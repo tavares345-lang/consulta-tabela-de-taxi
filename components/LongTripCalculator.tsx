@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import type { LongTrip } from '../types';
+import type { LongTrip, DistanceResult } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { TrashIcon } from './icons/TrashIcon';
@@ -58,7 +58,7 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
 
   useEffect(() => {
     if (value.trim() === '') {
-      setSuggestions([]);
+      setSuggestions(POPULAR_LOCATIONS.slice(0, 5));
     } else {
       const filtered = POPULAR_LOCATIONS.filter(loc => 
         loc.toLowerCase().includes(value.toLowerCase()) && 
@@ -101,27 +101,22 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
                     onChange(e.target.value);
                     setShowSuggestions(true);
                 }}
-                onFocus={() => {
-                   if(value.trim() === '') {
-                       setSuggestions(POPULAR_LOCATIONS.slice(0, 5));
-                   }
-                   setShowSuggestions(true);
-                }}
+                onFocus={() => setShowSuggestions(true)}
                 placeholder={placeholder}
                 className="w-full pl-12 pr-4 py-4 text-xl border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
                 autoComplete="off"
                 inputMode="search"
-                enterKeyHint="search"
             />
         </div>
         
         {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-10 w-full bg-white mt-1 rounded-lg shadow-xl max-h-60 overflow-y-auto border border-gray-200">
+            <div className="absolute z-30 w-full bg-white mt-1 rounded-lg shadow-xl max-h-60 overflow-y-auto border border-gray-200">
                 <ul>
                     {suggestions.map((suggestion, index) => (
                         <li 
                             key={index}
-                            onMouseDown={() => handleSelect(suggestion)}
+                            onMouseDown={(e) => { e.preventDefault(); handleSelect(suggestion); }}
+                            onTouchStart={(e) => { e.preventDefault(); handleSelect(suggestion); }}
                             className="px-4 py-4 hover:bg-blue-50 cursor-pointer text-lg text-gray-700 border-b last:border-b-0 border-gray-100 flex items-center active:bg-blue-100"
                         >
                             <MapPinIcon className="w-5 h-5 mr-3 text-gray-400" />
@@ -174,7 +169,7 @@ const LongTripModal: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-30 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
       <div className="bg-white rounded-lg shadow-xl p-8 w-full max-w-lg">
         <h2 className="text-3xl font-bold mb-6">{trip ? 'Editar Viagem' : 'Adicionar Nova Viagem'}</h2>
         <form onSubmit={handleSubmit}>
@@ -208,10 +203,10 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [origin, setOrigin] = useState('Aeroporto Internacional de Confins - Tancredo Neves');
     const [destination, setDestination] = useState('');
     const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+    const [sources, setSources] = useState<{ title: string; uri: string }[]>([]);
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
 
-    // Fix: Missing handleSave implementation to resolve the reported compilation error.
     const handleSave = (trip: LongTrip) => {
         if (!isAdmin) return;
         if (editingTrip) {
@@ -232,16 +227,18 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setIsLoadingDistance(true);
         setDistanceError(null);
         setCalculatedDistance(null);
+        setSources([]);
 
         try {
-            const distance = await getDistance(origin, destination);
-            if (distance !== null) {
-                setCalculatedDistance(distance);
+            const result: DistanceResult = await getDistance(origin, destination);
+            if (result.distance !== null) {
+                setCalculatedDistance(result.distance);
+                setSources(result.sources);
             } else {
-                setDistanceError("Não foi possível localizar este destino. Tente ser mais específico (ex: adicione cidade ou bairro).");
+                setDistanceError("Não foi possível localizar este destino. Tente ser mais específico, incluindo a cidade ou ponto de referência.");
             }
         } catch (error) {
-            setDistanceError("Erro ao conectar com o serviço de mapas. Tente novamente.");
+            setDistanceError("Ocorreu um erro ao calcular a rota. Verifique sua conexão e tente novamente.");
         } finally {
             setIsLoadingDistance(false);
         }
@@ -254,7 +251,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             <div className="bg-white rounded-xl shadow-md p-8 mb-8 border-l-8 border-blue-500">
                 <div className="flex items-center mb-6">
                     <CarIcon className="w-10 h-10 text-blue-500 mr-4" />
-                    <h2 className="text-3xl font-bold text-gray-800">Calculadora de Rota</h2>
+                    <h2 className="text-3xl font-bold text-gray-800">Calculadora de Rota (IA)</h2>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -278,7 +275,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                         disabled={isLoadingDistance}
                         className={`w-full md:w-auto px-10 py-5 rounded-full text-2xl font-bold text-white transition-all shadow-lg active:scale-95 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        {isLoadingDistance ? 'Calculando...' : 'Calcular Valor'}
+                        {isLoadingDistance ? 'Localizando Destino...' : 'Calcular Valor'}
                     </button>
 
                     {distanceError && (
@@ -286,16 +283,33 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                     )}
 
                     {calculatedDistance !== null && (
-                        <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100 flex flex-col md:flex-row justify-around items-center gap-6">
-                            <div className="text-center">
-                                <p className="text-gray-500 text-lg uppercase font-semibold">Distância</p>
-                                <p className="text-4xl font-extrabold text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} km</p>
+                        <div className="mt-8 bg-blue-50 w-full p-6 rounded-xl border border-blue-100">
+                            <div className="flex flex-col md:flex-row justify-around items-center gap-6">
+                                <div className="text-center">
+                                    <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Distância Rodoviária</p>
+                                    <p className="text-4xl font-extrabold text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} km</p>
+                                </div>
+                                <div className="hidden md:block w-px h-16 bg-blue-200"></div>
+                                <div className="text-center">
+                                    <p className="text-gray-500 text-lg uppercase font-semibold tracking-tighter">Valor Estimado</p>
+                                    <p className="text-5xl font-extrabold text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                                </div>
                             </div>
-                            <div className="hidden md:block w-px h-16 bg-gray-300"></div>
-                            <div className="text-center">
-                                <p className="text-gray-500 text-lg uppercase font-semibold">Valor Estimado</p>
-                                <p className="text-5xl font-extrabold text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
-                            </div>
+                            
+                            {sources.length > 0 && (
+                              <div className="mt-6 pt-4 border-t border-blue-200">
+                                <p className="text-sm font-bold text-blue-800 mb-2">Fontes de Pesquisa:</p>
+                                <ul className="flex flex-wrap gap-x-4 gap-y-1">
+                                  {sources.map((source, idx) => (
+                                    <li key={idx}>
+                                      <a href={source.uri} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline">
+                                        • {source.title}
+                                      </a>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                         </div>
                     )}
                 </div>
