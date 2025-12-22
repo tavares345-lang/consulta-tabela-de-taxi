@@ -15,6 +15,7 @@ const App: React.FC = () => {
   const [fares, setFares] = useState<Fare[]>(fareService.getFares());
   const [longTrips, setLongTrips] = useState<LongTrip[]>(fareService.getLongTrips());
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const [regionFilter, setRegionFilter] = useState<string>('');
   const [longTripSearchTerm, setLongTripSearchTerm] = useState<string>('');
   
   // Lazy initialization ensures we read from localStorage correctly on mount
@@ -56,12 +57,19 @@ const App: React.FC = () => {
     setCurrentUser(null);
   };
 
+  const uniqueRegions = React.useMemo(() => {
+    const regions = fares.map(f => f.region).filter(r => r && r.trim() !== '');
+    return Array.from(new Set(regions)).sort();
+  }, [fares]);
+
   const filteredFares = React.useMemo(() => {
-    return fares.filter(fare =>
-      fare.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      fare.region.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [fares, searchTerm]);
+    return fares.filter(fare => {
+      const matchesSearch = fare.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          fare.region.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesRegion = regionFilter === '' || fare.region === regionFilter;
+      return matchesSearch && matchesRegion;
+    });
+  }, [fares, searchTerm, regionFilter]);
 
   const filteredLongTrips = React.useMemo(() => {
     return longTrips.filter(trip =>
@@ -70,7 +78,8 @@ const App: React.FC = () => {
   }, [longTrips, longTripSearchTerm]);
 
   const handleAddFare = (newFare: Fare) => {
-    setFares(prevFares => [newFare, ...prevFares]);
+    // Adiciona ao final da lista
+    setFares(prevFares => [...prevFares, newFare]);
   };
 
   const handleUpdateFare = (updatedFare: Fare) => {
@@ -86,7 +95,8 @@ const App: React.FC = () => {
   };
 
   const handleAddLongTrip = (newTrip: LongTrip) => {
-    setLongTrips(prev => [newTrip, ...prev]);
+    // Adiciona ao final da lista
+    setLongTrips(prev => [...prev, newTrip]);
   };
 
   const handleUpdateLongTrip = (updatedTrip: LongTrip) => {
@@ -112,6 +122,9 @@ const App: React.FC = () => {
             isAdmin={isAdmin}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            regionFilter={regionFilter}
+            setRegionFilter={setRegionFilter}
+            availableRegions={uniqueRegions}
             onAddFare={handleAddFare}
             onUpdateFare={handleUpdateFare}
             onDeleteFare={handleDeleteFare}
@@ -147,10 +160,10 @@ const App: React.FC = () => {
         activeView={activeView}
         onViewChange={setActiveView}
       />
-      <main className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <main className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto">
         {renderActiveView()}
       </main>
-      <footer className="text-center p-6 text-gray-500 text-base">
+      <footer className="text-center p-6 text-gray-500 text-xs">
         <p>&copy; {new Date().getFullYear()} TABELA TÁXI. Todos os direitos reservados.</p>
       </footer>
     </div>
