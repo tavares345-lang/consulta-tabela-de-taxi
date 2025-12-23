@@ -36,35 +36,49 @@ export const getDistance = async (origin: string, destination: string): Promise<
     return { distance: null, sources: [] };
   }
 
-  // Criamos a instância aqui para garantir o uso da chave mais atual
+  // Model gemini-2.5-flash is required for googleMaps tool
   const ai = new GoogleGenAI({ apiKey });
-  const modelName = 'gemini-3-flash-preview';
+  const modelName = 'gemini-2.5-flash';
 
-  // Verifica se é coordenada para formatar a query de busca adequadamente
+  // Verifica se a origem são coordenadas GPS
   const isCoords = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(origin.trim());
-  const formattedOrigin = isCoords ? `coordenadas geográficas ${origin}` : origin;
+  let toolConfig = undefined;
 
-  const prompt = `Aja como um assistente de logística de táxi no Brasil.
-Sua tarefa é encontrar a distância rodoviária (por estrada, de carro) entre:
-ORIGEM: ${formattedOrigin}
+  if (isCoords) {
+    const [lat, lng] = origin.split(',').map(v => parseFloat(v.trim()));
+    if (!isNaN(lat) && !isNaN(lng)) {
+      toolConfig = {
+        retrievalConfig: {
+          latLng: {
+            latitude: lat,
+            longitude: lng
+          }
+        }
+      };
+    }
+  }
+
+  const prompt = `Aja como um despachante de táxi no Brasil.
+Sua missão é fornecer a DISTÂNCIA RODOVIÁRIA exata utilizando o GOOGLE MAPS.
+
+ORIGEM: ${origin}
 DESTINO: ${destination}
 
-Instruções críticas:
-1. Use a busca do Google para encontrar a rota real por estradas brasileiras.
-2. Se a origem for coordenadas, identifique o local correspondente.
-3. Considere sempre a distância em QUILÔMETROS (KM).
-4. O valor final deve ser o trajeto mais comum para veículos.
-5. Sua resposta deve terminar obrigatoriamente com: RESULT_KM: [número]
+Instruções:
+1. Utilize obrigatoriamente a ferramenta Google Maps para encontrar a rota de carro mais eficiente.
+2. Identifique a distância total do trajeto em quilômetros.
+3. Se houver mais de uma rota, use a principal recomendada pelo Google Maps.
+4. Sua resposta DEVE terminar com o formato: RESULT_KM: [número]
 
-Responda em Português do Brasil.`;
+Considere o contexto geográfico brasileiro para nomes de cidades e locais.`;
 
   try {
     const response = await ai.models.generateContent({
       model: modelName,
       contents: prompt,
       config: {
-        tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 2000 },
+        tools: [{ googleMaps: {} }, { googleSearch: {} }],
+        toolConfig: toolConfig,
         temperature: 0.1,
       },
     });
@@ -77,17 +91,25 @@ Responda em Português do Brasil.`;
     
     if (groundingChunks) {
       groundingChunks.forEach((chunk: any) => {
-        if (chunk.web?.uri && chunk.web?.title) {
+        // Handle Maps grounding
+        if (chunk.maps?.uri) {
+          sources.push({ 
+            title: chunk.maps.title || "Ver no Google Maps", 
+            uri: chunk.maps.uri 
+          });
+        } 
+        // Handle Search grounding
+        else if (chunk.web?.uri && chunk.web?.title) {
           sources.push({ title: chunk.web.title, uri: chunk.web.uri });
         }
       });
     }
 
-    // Fallback caso a busca falhe
     if (distance === null) {
+      // Fallback simples sem ferramentas se o grounding falhar
       const fallback = await ai.models.generateContent({
         model: modelName,
-        contents: `Qual a distância em km por estrada de ${origin} para ${destination}? Responda apenas o número.`,
+        contents: `Qual a distância rodoviária em km de ${origin} para ${destination}? Responda apenas o número.`,
       });
       return { distance: extractDistance(fallback.text), sources };
     }
@@ -95,7 +117,7 @@ Responda em Português do Brasil.`;
     return { distance, sources };
 
   } catch (error) {
-    console.error("Erro no serviço de distância:", error);
+    console.error("Erro no serviço de mapas/Gemini:", error);
     return { distance: null, sources: [] };
   }
 };

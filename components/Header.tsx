@@ -44,13 +44,11 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, activeView, onViewChang
                 className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${activeView === 'table' ? activeTabClass : inactiveTabClass}`}>
                 Bairro/Hotel
               </button>
-              {isAdmin && (
-                <button 
-                  onClick={() => handleViewChange('calculator')}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${activeView === 'calculator' ? activeTabClass : inactiveTabClass}`}>
-                  Calculadora
-                </button>
-              )}
+              <button 
+                onClick={() => handleViewChange('calculator')}
+                className={`px-3 py-1 rounded-full text-xs font-bold transition-all duration-200 ${activeView === 'calculator' ? activeTabClass : inactiveTabClass}`}>
+                Viagens Longas
+              </button>
               {isAdmin && (
                 <button 
                   onClick={() => handleViewChange('users')}
@@ -85,7 +83,7 @@ const Header: React.FC<HeaderProps> = ({ user, onLogout, activeView, onViewChang
         <div className="md:hidden border-t border-gray-50 bg-white shadow-lg animate-in fade-in slide-in-from-top-1 duration-200">
           <div className="px-3 py-2 space-y-1">
             <button onClick={() => handleViewChange('table')} className={`w-full text-left ${mobileLinkClass} ${activeView === 'table' ? activeTabClass : inactiveTabClass}`}>Bairro/Hotel</button>
-            {isAdmin && <button onClick={() => handleViewChange('calculator')} className={`w-full text-left ${mobileLinkClass} ${activeView === 'calculator' ? activeTabClass : inactiveTabClass}`}>Calculadora</button>}
+            <button onClick={() => handleViewChange('calculator')} className={`w-full text-left ${mobileLinkClass} ${activeView === 'calculator' ? activeTabClass : inactiveTabClass}`}>Viagens Longas</button>
             {isAdmin && <button onClick={() => handleViewChange('users')} className={`w-full text-left ${mobileLinkClass} ${activeView === 'users' ? activeTabClass : inactiveTabClass}`}>Usuários</button>}
           </div>
           <div className="px-3 py-2 border-t border-gray-50 flex items-center justify-between">

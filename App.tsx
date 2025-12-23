@@ -51,8 +51,6 @@ const App: React.FC = () => {
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
-    // Reset view to table on login to ensure clean state
-    setActiveView('table');
   };
 
   const handleLogout = () => {
@@ -84,6 +82,7 @@ const App: React.FC = () => {
   }, [longTrips, longTripSearchTerm, longTripKmSearchTerm]);
 
   const handleAddFare = (newFare: Fare) => {
+    // Adiciona ao final da lista
     setFares(prevFares => [...prevFares, newFare]);
   };
 
@@ -100,6 +99,7 @@ const App: React.FC = () => {
   };
 
   const handleAddLongTrip = (newTrip: LongTrip) => {
+    // Adiciona ao final da lista
     setLongTrips(prev => [...prev, newTrip]);
   };
 
@@ -136,8 +136,7 @@ const App: React.FC = () => {
           />
         );
       case 'calculator':
-        // Enforce admin check for calculator view
-        return isAdmin ? (
+        return (
           <LongTripCalculator 
             isAdmin={isAdmin}
             pricePerKm={pricePerKm}
@@ -151,10 +150,6 @@ const App: React.FC = () => {
             onUpdateLongTrip={handleUpdateLongTrip}
             onDeleteLongTrip={handleDeleteLongTrip}
           />
-        ) : (
-          <div className="bg-red-50 p-10 rounded-xl text-center border border-red-100">
-            <p className="text-red-600 font-bold">Acesso Restrito: Apenas administradores podem utilizar a calculadora.</p>
-          </div>
         );
       case 'users':
         return isAdmin ? <UserManagement /> : <p className="text-xl">Acesso negado.</p>;
