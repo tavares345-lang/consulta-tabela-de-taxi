@@ -74,13 +74,13 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
   return (
     <div className="relative" ref={wrapperRef}>
         <div className="flex items-center justify-between mb-1">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase">{label}</label>
+            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{label}</label>
             {onUseCurrentLocation && (
                 <button 
                     onClick={(e) => { e.preventDefault(); onUseCurrentLocation(); }}
-                    className="text-[9px] font-black text-blue-600 uppercase hover:underline flex items-center"
+                    className="text-[9px] font-black text-blue-600 uppercase hover:text-blue-800 flex items-center bg-blue-50 px-2 py-0.5 rounded"
                 >
-                    <MapPinIcon className="w-2.5 h-2.5 mr-0.5" /> Minha Localização
+                    <MapPinIcon className="w-2.5 h-2.5 mr-0.5" /> GPS
                 </button>
             )}
         </div>
@@ -97,7 +97,7 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 placeholder={placeholder}
-                className="w-full pl-8 pr-3 py-2 text-xs border border-gray-100 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none bg-gray-50"
+                className="w-full pl-8 pr-8 py-2 text-xs border border-gray-100 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none bg-gray-50 shadow-inner"
                 autoComplete="off"
             />
             {value && (
@@ -207,10 +207,11 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
+    const [sources, setSources] = useState<{title: string, uri: string}[]>([]);
 
     const handleUseCurrentLocation = () => {
         if (!navigator.geolocation) {
-            alert("Geolocalização não é suportada pelo seu navegador.");
+            alert("Seu navegador não suporta geolocalização.");
             return;
         }
 
@@ -218,16 +219,16 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
-                // Preenchemos com as coordenadas para que o Gemini use na busca
                 setOrigin(`${latitude}, ${longitude}`);
                 setIsLoadingDistance(false);
             },
             (error) => {
-                console.error("Erro ao obter localização:", error);
-                alert("Não foi possível obter sua localização. Verifique as permissões do navegador.");
+                let msg = "Não foi possível obter sua localização.";
+                if (error.code === 1) msg = "Permissão de localização negada.";
+                alert(msg);
                 setIsLoadingDistance(false);
             },
-            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            { enableHighAccuracy: true, timeout: 8000 }
         );
     };
 
@@ -236,16 +237,18 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setIsLoadingDistance(true);
         setDistanceError(null);
         setCalculatedDistance(null);
+        setSources([]);
 
         try {
             const result: DistanceResult = await getDistance(origin, destination);
             if (result.distance !== null && result.distance > 0) {
                 setCalculatedDistance(result.distance);
+                setSources(result.sources);
             } else {
-                setDistanceError("Distância não encontrada.");
+                setDistanceError("Distância rodoviária não encontrada para esta rota.");
             }
         } catch (error) {
-            setDistanceError("Erro no cálculo.");
+            setDistanceError("Erro ao processar consulta. Verifique sua conexão.");
         } finally {
             setIsLoadingDistance(false);
         }
@@ -263,39 +266,71 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             {isModalOpen && <LongTripModal key={editingTrip?.id || 'new'} trip={editingTrip} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
            
             {/* Seção de Cálculo Dinâmico */}
-            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 border-l-4 border-l-blue-500">
-                <div className="flex items-center mb-4">
-                    <CarIcon className="w-5 h-5 text-blue-500 mr-2" />
-                    <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Calculadora de Rota</h2>
+            <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 border-l-4 border-l-blue-500 overflow-hidden">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center">
+                      <CarIcon className="w-5 h-5 text-blue-500 mr-2" />
+                      <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Calculadora de Rota</h2>
+                    </div>
+                    {isLoadingDistance && (
+                      <div className="flex items-center space-x-1">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce delay-75"></div>
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce delay-150"></div>
+                      </div>
+                    )}
                 </div>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                     <LocationAutocompleteInput 
-                        label="Origem" 
+                        label="Onde você está?" 
                         value={origin} 
                         onChange={setOrigin} 
-                        placeholder="Ex: Confins..." 
+                        placeholder="Origem (Endereço ou GPS)..." 
                         onUseCurrentLocation={handleUseCurrentLocation}
                     />
                     <LocationAutocompleteInput 
-                        label="Destino" 
+                        label="Para onde você vai?" 
                         value={destination} 
                         onChange={setDestination} 
-                        placeholder="Ex: Ipatinga..." 
+                        placeholder="Cidade ou local de destino..." 
                     />
                 </div>
+                
                 <div className="flex flex-col items-center">
                     <button 
                         onClick={handleCalculateRoute}
                         disabled={isLoadingDistance}
-                        className={`w-full md:w-auto px-6 py-2 rounded-full text-xs font-black text-white uppercase shadow-sm active:scale-95 transition-all ${isLoadingDistance ? 'bg-gray-300' : 'bg-blue-600 hover:bg-blue-700'}`}
+                        className={`w-full md:w-auto px-10 py-3 rounded-full text-xs font-black text-white uppercase shadow-lg active:scale-95 transition-all ${isLoadingDistance ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                     >
-                        {isLoadingDistance ? 'Calculando...' : 'Calcular Valor'}
+                        {isLoadingDistance ? 'Consultando Mapas...' : 'Calcular Rota em Real Time'}
                     </button>
-                    {distanceError && <p className="mt-2 text-red-500 text-[10px] font-bold">{distanceError}</p>}
+                    
+                    {distanceError && (
+                      <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded-lg">
+                        <p className="text-red-500 text-[10px] font-bold text-center uppercase">{distanceError}</p>
+                      </div>
+                    )}
+                    
                     {calculatedDistance !== null && (
-                        <div className="mt-4 text-center animate-in slide-in-from-bottom-2 duration-300">
-                            <p className="text-gray-400 text-[9px] uppercase font-black tracking-widest mb-0.5">KM: {calculatedDistance.toFixed(1).replace('.', ',')}</p>
-                            <p className="text-2xl font-black text-green-600">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                        <div className="mt-6 text-center animate-in slide-in-from-bottom-4 duration-500">
+                            <div className="inline-block p-1 bg-green-50 rounded-full px-4 mb-2">
+                              <span className="text-green-700 text-[10px] font-black uppercase tracking-tighter">Distância: {calculatedDistance.toFixed(1).replace('.', ',')} km</span>
+                            </div>
+                            <p className="text-4xl font-black text-green-600 drop-shadow-sm">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                            
+                            {sources.length > 0 && (
+                              <div className="mt-4 pt-4 border-t border-gray-50">
+                                <p className="text-[9px] text-gray-400 font-bold uppercase mb-2">Fontes de Grounding:</p>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                  {sources.map((s, idx) => (
+                                    <a key={idx} href={s.uri} target="_blank" rel="noopener noreferrer" className="text-[9px] text-blue-500 hover:underline truncate max-w-[150px]">
+                                      🔗 {s.title}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -303,7 +338,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
 
             {/* Cabeçalho da Listagem com Filtros Duplos */}
             <div className="flex flex-col xl:flex-row justify-between items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Viagens Longas</h2>
+                <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Viagens Longas Salvas</h2>
                 <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
                     {/* Busca por Cidade */}
                     <div className="relative flex-1 sm:w-48">
@@ -354,7 +389,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
 
             {isAdmin && (
                 <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Preço/KM</label>
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Preço/KM Base (Admin)</label>
                     <div className="flex items-center border border-gray-100 rounded-lg overflow-hidden bg-gray-50 px-2">
                         <span className="text-[10px] text-gray-400 font-bold mr-1">R$</span>
                         <input

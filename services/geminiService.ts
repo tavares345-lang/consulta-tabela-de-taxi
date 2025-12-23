@@ -19,13 +19,11 @@ const extractDistance = (text: string | undefined): number | null => {
   const kmMatch = normalized.match(/(\d+(\.\d+)?)\s*(km|quil[ôo]metros)/i);
   if (kmMatch) return parseFloat(kmMatch[1]);
 
-  // 3. Procura por qualquer número que pareça uma distância razoável (evitando anos ou números pequenos demais)
+  // 3. Procura por qualquer número que pareça uma distância razoável
   const allNumbers = normalized.match(/(\d+(\.\d+)?)/g);
   if (allNumbers) {
-    const candidates = allNumbers.map(n => parseFloat(n)).filter(n => n > 0);
-    if (candidates.length > 0) {
-      return candidates[0];
-    }
+    const candidates = allNumbers.map(n => parseFloat(n)).filter(n => n > 0 && n < 5000);
+    if (candidates.length > 0) return candidates[0];
   }
 
   return null;
@@ -38,25 +36,27 @@ export const getDistance = async (origin: string, destination: string): Promise<
     return { distance: null, sources: [] };
   }
 
+  // Criamos a instância aqui para garantir o uso da chave mais atual
   const ai = new GoogleGenAI({ apiKey });
   const modelName = 'gemini-3-flash-preview';
 
-  // Se a origem parecer coordenadas (lat, lng), não adicionamos Brasil para não confundir o search
+  // Verifica se é coordenada para formatar a query de busca adequadamente
   const isCoords = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(origin.trim());
-  const queryOrigin = isCoords ? origin : (origin.toLowerCase().includes("brasil") ? origin : `${origin}, Brasil`);
-  const queryDest = destination.toLowerCase().includes("brasil") ? destination : `${destination}, Brasil`;
+  const formattedOrigin = isCoords ? `coordenadas geográficas ${origin}` : origin;
 
-  const prompt = `Instructions:
-1. Use Google Search to find the road distance between "${queryOrigin}" and "${queryDest}".
-2. The origin might be geographical coordinates (latitude, longitude).
-3. Look for the shortest or most common driving route for cars/taxis.
-4. Your output MUST end with the string "RESULT_KM: [number]" where [number] is the distance in kilometers.
-5. Provide a brief reasoning for the distance found.
+  const prompt = `Aja como um assistente de logística de táxi no Brasil.
+Sua tarefa é encontrar a distância rodoviária (por estrada, de carro) entre:
+ORIGEM: ${formattedOrigin}
+DESTINO: ${destination}
 
-Context: Taxi trip calculation in Brazil.
-Format:
-Reasoning: [your thought process]
-RESULT_KM: [number]`;
+Instruções críticas:
+1. Use a busca do Google para encontrar a rota real por estradas brasileiras.
+2. Se a origem for coordenadas, identifique o local correspondente.
+3. Considere sempre a distância em QUILÔMETROS (KM).
+4. O valor final deve ser o trajeto mais comum para veículos.
+5. Sua resposta deve terminar obrigatoriamente com: RESULT_KM: [número]
+
+Responda em Português do Brasil.`;
 
   try {
     const response = await ai.models.generateContent({
@@ -64,19 +64,16 @@ RESULT_KM: [number]`;
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        thinkingConfig: { thinkingBudget: 4000 },
-        temperature: 0.2,
+        thinkingConfig: { thinkingBudget: 2000 },
+        temperature: 0.1,
       },
     });
 
-    const textOutput = response.text;
-    console.log("[Gemini Response]:", textOutput);
-    
+    const textOutput = response.text || "";
     const distance = extractDistance(textOutput);
     
     const sources: { title: string; uri: string }[] = [];
-    const groundingMetadata = response.candidates?.[0]?.groundingMetadata;
-    const groundingChunks = groundingMetadata?.groundingChunks;
+    const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
     
     if (groundingChunks) {
       groundingChunks.forEach((chunk: any) => {
@@ -86,21 +83,19 @@ RESULT_KM: [number]`;
       });
     }
 
+    // Fallback caso a busca falhe
     if (distance === null) {
-      console.warn("[Gemini] Falha ao extrair distância com busca. Tentando conhecimento interno...");
-      const fallbackResponse = await ai.models.generateContent({
+      const fallback = await ai.models.generateContent({
         model: modelName,
-        contents: `Qual a distância rodoviária aproximada entre ${origin} e ${destination} no Brasil? Responda apenas o número em km.`,
-        config: { temperature: 0 }
+        contents: `Qual a distância em km por estrada de ${origin} para ${destination}? Responda apenas o número.`,
       });
-      const fallbackDistance = extractDistance(fallbackResponse.text);
-      return { distance: fallbackDistance, sources };
+      return { distance: extractDistance(fallback.text), sources };
     }
 
     return { distance, sources };
 
   } catch (error) {
-    console.error("Erro no getDistance:", error);
+    console.error("Erro no serviço de distância:", error);
     return { distance: null, sources: [] };
   }
 };
