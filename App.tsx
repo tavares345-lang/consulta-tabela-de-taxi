@@ -17,6 +17,7 @@ const App: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [longTripSearchTerm, setLongTripSearchTerm] = useState<string>('');
+  const [longTripKmSearchTerm, setLongTripKmSearchTerm] = useState<string>('');
   
   // Lazy initialization ensures we read from localStorage correctly on mount
   const [pricePerKm, setPricePerKm] = useState<number>(() => fareService.getPricePerKm());
@@ -72,10 +73,13 @@ const App: React.FC = () => {
   }, [fares, searchTerm, regionFilter]);
 
   const filteredLongTrips = React.useMemo(() => {
-    return longTrips.filter(trip =>
-        trip.city.toLowerCase().includes(longTripSearchTerm.toLowerCase())
-    );
-  }, [longTrips, longTripSearchTerm]);
+    return longTrips.filter(trip => {
+        const matchesCity = trip.city.toLowerCase().includes(longTripSearchTerm.toLowerCase());
+        const matchesKm = longTripKmSearchTerm === '' || 
+                         trip.kilometers.toString().includes(longTripKmSearchTerm.replace(',', '.'));
+        return matchesCity && matchesKm;
+    });
+  }, [longTrips, longTripSearchTerm, longTripKmSearchTerm]);
 
   const handleAddFare = (newFare: Fare) => {
     // Adiciona ao final da lista
@@ -140,6 +144,8 @@ const App: React.FC = () => {
             longTrips={filteredLongTrips}
             searchTerm={longTripSearchTerm}
             setSearchTerm={setLongTripSearchTerm}
+            kmSearchTerm={longTripKmSearchTerm}
+            setKmSearchTerm={setLongTripKmSearchTerm}
             onAddLongTrip={handleAddLongTrip}
             onUpdateLongTrip={handleUpdateLongTrip}
             onDeleteLongTrip={handleDeleteLongTrip}

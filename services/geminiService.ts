@@ -20,15 +20,10 @@ const extractDistance = (text: string | undefined): number | null => {
   if (kmMatch) return parseFloat(kmMatch[1]);
 
   // 3. Procura por qualquer número que pareça uma distância razoável (evitando anos ou números pequenos demais)
-  // Tentamos pegar o número mais "isolado" ou proeminente
   const allNumbers = normalized.match(/(\d+(\.\d+)?)/g);
   if (allNumbers) {
-    // Filtramos números que podem ser anos (1900-2100) ou muito pequenos, 
-    // a menos que seja o único número
     const candidates = allNumbers.map(n => parseFloat(n)).filter(n => n > 0);
     if (candidates.length > 0) {
-      // Se houver "RESULT_KM" no texto original mas o regex falhou, o número pode estar lá
-      // Caso contrário, pegamos o primeiro número > 0
       return candidates[0];
     }
   }
@@ -46,17 +41,19 @@ export const getDistance = async (origin: string, destination: string): Promise<
   const ai = new GoogleGenAI({ apiKey });
   const modelName = 'gemini-3-flash-preview';
 
-  // Adicionamos "Brasil" para garantir que o Google Search foque na região correta
-  const queryOrigin = origin.toLowerCase().includes("brasil") ? origin : `${origin}, Brasil`;
+  // Se a origem parecer coordenadas (lat, lng), não adicionamos Brasil para não confundir o search
+  const isCoords = /^-?\d+(\.\d+)?,\s*-?\d+(\.\d+)?$/.test(origin.trim());
+  const queryOrigin = isCoords ? origin : (origin.toLowerCase().includes("brasil") ? origin : `${origin}, Brasil`);
   const queryDest = destination.toLowerCase().includes("brasil") ? destination : `${destination}, Brasil`;
 
   const prompt = `Instructions:
 1. Use Google Search to find the road distance between "${queryOrigin}" and "${queryDest}".
-2. Look for the shortest or most common driving route.
-3. Your output MUST end with the string "RESULT_KM: [number]" where [number] is the distance in kilometers.
-4. If you find multiple distances, use the one for cars/taxis.
+2. The origin might be geographical coordinates (latitude, longitude).
+3. Look for the shortest or most common driving route for cars/taxis.
+4. Your output MUST end with the string "RESULT_KM: [number]" where [number] is the distance in kilometers.
+5. Provide a brief reasoning for the distance found.
 
-Context: Taxi trip in Minas Gerais, Brazil.
+Context: Taxi trip calculation in Brazil.
 Format:
 Reasoning: [your thought process]
 RESULT_KM: [number]`;
@@ -67,7 +64,6 @@ RESULT_KM: [number]`;
       contents: prompt,
       config: {
         tools: [{ googleSearch: {} }],
-        // Usamos um budget de pensamento maior para garantir que ele processe os resultados da busca
         thinkingConfig: { thinkingBudget: 4000 },
         temperature: 0.2,
       },
@@ -90,12 +86,11 @@ RESULT_KM: [number]`;
       });
     }
 
-    // Se falhou com search, tentamos uma última vez sem search (conhecimento interno do modelo)
     if (distance === null) {
       console.warn("[Gemini] Falha ao extrair distância com busca. Tentando conhecimento interno...");
       const fallbackResponse = await ai.models.generateContent({
         model: modelName,
-        contents: `Qual a distância rodoviária aproximada entre ${origin} e ${destination} em Minas Gerais? Responda apenas o número em km.`,
+        contents: `Qual a distância rodoviária aproximada entre ${origin} e ${destination} no Brasil? Responda apenas o número em km.`,
         config: { temperature: 0 }
       });
       const fallbackDistance = extractDistance(fallbackResponse.text);

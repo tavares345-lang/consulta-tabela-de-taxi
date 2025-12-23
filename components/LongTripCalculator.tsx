@@ -32,9 +32,10 @@ interface LocationAutocompleteInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
+  onUseCurrentLocation?: () => void;
 }
 
-const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ label, value, onChange, placeholder }) => {
+const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ label, value, onChange, placeholder, onUseCurrentLocation }) => {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const wrapperRef = useRef<HTMLDivElement>(null);
@@ -72,7 +73,17 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
 
   return (
     <div className="relative" ref={wrapperRef}>
-        <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">{label}</label>
+        <div className="flex items-center justify-between mb-1">
+            <label className="block text-[10px] font-bold text-gray-400 uppercase">{label}</label>
+            {onUseCurrentLocation && (
+                <button 
+                    onClick={(e) => { e.preventDefault(); onUseCurrentLocation(); }}
+                    className="text-[9px] font-black text-blue-600 uppercase hover:underline flex items-center"
+                >
+                    <MapPinIcon className="w-2.5 h-2.5 mr-0.5" /> Minha Localização
+                </button>
+            )}
+        </div>
         <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-300">
                 <MapPinIcon className="w-3.5 h-3.5" />
@@ -176,6 +187,8 @@ interface LongTripCalculatorProps {
   setPricePerKm: (price: number) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  kmSearchTerm: string;
+  setKmSearchTerm: (term: string) => void;
   onAddLongTrip: (trip: LongTrip) => void;
   onUpdateLongTrip: (trip: LongTrip) => void;
   onDeleteLongTrip: (id: string) => void;
@@ -183,6 +196,7 @@ interface LongTripCalculatorProps {
 
 const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({ 
     longTrips, isAdmin, pricePerKm, setPricePerKm, searchTerm, setSearchTerm, 
+    kmSearchTerm, setKmSearchTerm,
     onAddLongTrip, onUpdateLongTrip, onDeleteLongTrip 
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -193,6 +207,29 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
+
+    const handleUseCurrentLocation = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocalização não é suportada pelo seu navegador.");
+            return;
+        }
+
+        setIsLoadingDistance(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                // Preenchemos com as coordenadas para que o Gemini use na busca
+                setOrigin(`${latitude}, ${longitude}`);
+                setIsLoadingDistance(false);
+            },
+            (error) => {
+                console.error("Erro ao obter localização:", error);
+                alert("Não foi possível obter sua localização. Verifique as permissões do navegador.");
+                setIsLoadingDistance(false);
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    };
 
     const handleCalculateRoute = async () => {
         if (!origin.trim() || !destination.trim()) return;
@@ -232,8 +269,19 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                     <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Calculadora de Rota</h2>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                    <LocationAutocompleteInput label="Origem" value={origin} onChange={setOrigin} placeholder="Ex: Confins..." />
-                    <LocationAutocompleteInput label="Destino" value={destination} onChange={setDestination} placeholder="Ex: Ipatinga..." />
+                    <LocationAutocompleteInput 
+                        label="Origem" 
+                        value={origin} 
+                        onChange={setOrigin} 
+                        placeholder="Ex: Confins..." 
+                        onUseCurrentLocation={handleUseCurrentLocation}
+                    />
+                    <LocationAutocompleteInput 
+                        label="Destino" 
+                        value={destination} 
+                        onChange={setDestination} 
+                        placeholder="Ex: Ipatinga..." 
+                    />
                 </div>
                 <div className="flex flex-col items-center">
                     <button 
@@ -253,11 +301,12 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                 </div>
             </div>
 
-            {/* Cabeçalho da Listagem */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
+            {/* Cabeçalho da Listagem com Filtros Duplos */}
+            <div className="flex flex-col xl:flex-row justify-between items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
                 <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Viagens Longas</h2>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <div className="relative flex-1 sm:w-56">
+                <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
+                    {/* Busca por Cidade */}
+                    <div className="relative flex-1 sm:w-48">
                         <input
                             type="text"
                             placeholder="Buscar cidade..."
@@ -268,6 +317,24 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                         {searchTerm && (
                             <button 
                                 onClick={() => setSearchTerm('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
+                            >
+                                <XIcon className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+                    {/* Busca por KM */}
+                    <div className="relative flex-1 sm:w-32">
+                        <input
+                            type="text"
+                            placeholder="Filtrar KM..."
+                            value={kmSearchTerm}
+                            onChange={(e) => setKmSearchTerm(e.target.value)}
+                            className="w-full pr-8 pl-3 py-2 text-xs border border-gray-100 rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-bold"
+                        />
+                        {kmSearchTerm && (
+                            <button 
+                                onClick={() => setKmSearchTerm('')}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
                             >
                                 <XIcon className="w-3.5 h-3.5" />
@@ -353,7 +420,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                 )}
                             </tr>
                         )) : (
-                            <tr><td colSpan={isAdmin ? 4 : 3} className="p-10 text-center text-gray-400 text-xs italic">Nenhuma viagem listada.</td></tr>
+                            <tr><td colSpan={isAdmin ? 4 : 3} className="p-10 text-center text-gray-400 text-xs italic">Nenhuma viagem encontrada com estes filtros.</td></tr>
                         )}
                     </tbody>
                 </table>
