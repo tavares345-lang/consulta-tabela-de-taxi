@@ -73,20 +73,20 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
 
   return (
     <div className="relative" ref={wrapperRef}>
-        <div className="flex items-center justify-between mb-1">
-            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-tighter">{label}</label>
+        <div className="flex items-center justify-between mb-2">
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-tighter">{label}</label>
             {onUseCurrentLocation && (
                 <button 
                     onClick={(e) => { e.preventDefault(); onUseCurrentLocation(); }}
-                    className="text-[9px] font-black text-blue-600 uppercase hover:text-blue-800 flex items-center bg-blue-50 px-2 py-0.5 rounded"
+                    className="text-[11px] font-black text-blue-600 uppercase hover:text-blue-800 flex items-center bg-blue-50 px-3 py-1 rounded-full transition-colors"
                 >
-                    <MapPinIcon className="w-2.5 h-2.5 mr-0.5" /> GPS
+                    <MapPinIcon className="w-3.5 h-3.5 mr-1" /> GPS
                 </button>
             )}
         </div>
         <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-gray-300">
-                <MapPinIcon className="w-3.5 h-3.5" />
+            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                <MapPinIcon className="w-4 h-4" />
             </span>
             <input 
                 type="text" 
@@ -97,27 +97,27 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 placeholder={placeholder}
-                className="w-full pl-8 pr-8 py-2 text-xs border border-gray-100 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none bg-gray-50 shadow-inner"
+                className="w-full pl-10 pr-10 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none bg-gray-50 shadow-sm"
                 autoComplete="off"
             />
             {value && (
               <button 
                   onClick={() => onChange('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-500"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-500"
               >
-                  <XIcon className="w-3 h-3" />
+                  <XIcon className="w-4 h-4" />
               </button>
             )}
         </div>
         
         {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-30 w-full bg-white mt-1 rounded-lg shadow-xl max-h-48 overflow-y-auto border border-gray-100 animate-in fade-in zoom-in duration-150">
+            <div className="absolute z-30 w-full bg-white mt-2 rounded-xl shadow-2xl max-h-60 overflow-y-auto border border-gray-100 animate-in fade-in zoom-in duration-150">
                 <ul>
                     {suggestions.map((suggestion, index) => (
                         <li 
                             key={index}
                             onMouseDown={(e) => { e.preventDefault(); handleSelect(suggestion); }}
-                            className="px-3 py-2 hover:bg-blue-50 cursor-pointer text-[11px] text-gray-700 border-b last:border-b-0 border-gray-50"
+                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 border-b last:border-b-0 border-gray-50 font-medium"
                         >
                             {suggestion}
                         </li>
@@ -159,20 +159,20 @@ const LongTripModal: React.FC<LongTripModalProps> = ({ trip, onSave, onClose }) 
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm animate-in zoom-in duration-200">
-        <h2 className="text-lg font-bold mb-4 text-gray-800">{trip ? 'Editar Viagem' : 'Nova Viagem'}</h2>
-        <form onSubmit={handleSubmit} className="space-y-3">
+      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-in zoom-in duration-200">
+        <h2 className="text-xl font-black mb-6 text-gray-800">CADASTRAR DESTINO</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Cidade/Destino</label>
-              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Ex: Rio de Janeiro" className="w-full p-2 text-sm border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none" required />
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Cidade/Destino</label>
+              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Ex: Rio de Janeiro" className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-sm" required />
           </div>
           <div>
-              <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Distância (KM)</label>
-              <input type="number" name="kilometers" value={formData.kilometers} onChange={handleChange} placeholder="0" className="w-full p-2 text-sm border rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none" step="0.1" required />
+              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Distância (KM)</label>
+              <input type="number" name="kilometers" value={formData.kilometers} onChange={handleChange} placeholder="0" className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-sm font-bold" step="0.1" required />
           </div>
-          <div className="flex justify-end space-x-2 pt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-lg transition-colors">Cancelar</button>
-            <button type="submit" className="px-4 py-2 text-xs font-bold bg-yellow-400 text-gray-900 rounded-lg hover:bg-yellow-500 transition-colors shadow-sm">Salvar</button>
+          <div className="flex justify-end space-x-3 pt-6">
+            <button type="button" onClick={onClose} className="px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors uppercase">Cancelar</button>
+            <button type="submit" className="px-6 py-3 text-sm font-black bg-yellow-400 text-gray-900 rounded-xl hover:bg-yellow-500 transition-colors shadow-md uppercase">Salvar Destino</button>
           </div>
         </form>
       </div>
@@ -205,6 +205,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [origin, setOrigin] = useState('Aeroporto Internacional de Confins - Tancredo Neves');
     const [destination, setDestination] = useState('');
     const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
+    const [sources, setSources] = useState<{ title: string; uri: string }[]>([]);
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
 
@@ -236,16 +237,18 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setIsLoadingDistance(true);
         setDistanceError(null);
         setCalculatedDistance(null);
+        setSources([]);
 
         try {
             const result: DistanceResult = await getDistance(origin, destination);
             if (result.distance !== null && result.distance > 0) {
                 setCalculatedDistance(result.distance);
+                setSources(result.sources || []);
             } else {
-                setDistanceError("Distância rodoviária não encontrada para esta rota.");
+                setDistanceError("Distância não encontrada. Tente refinar os endereços.");
             }
         } catch (error) {
-            setDistanceError("Erro ao processar consulta. Verifique sua conexão.");
+            setDistanceError("Falha na conexão com o serviço de mapas.");
         } finally {
             setIsLoadingDistance(false);
         }
@@ -259,39 +262,39 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             {isModalOpen && <LongTripModal key={editingTrip?.id || 'new'} trip={editingTrip} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
            
             {/* Seção de Cálculo Dinâmico - APENAS ADMIN */}
             {isAdmin && (
-              <div className="bg-white rounded-xl shadow-sm p-4 border border-gray-100 border-l-4 border-l-blue-500 overflow-hidden">
-                  <div className="flex items-center justify-between mb-4">
+              <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100 border-l-8 border-l-blue-600">
+                  <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center">
-                        <CarIcon className="w-5 h-5 text-blue-500 mr-2" />
-                        <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Calculadora de Rota</h2>
+                        <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                            <CarIcon className="w-6 h-6 text-blue-600" />
+                        </div>
+                        <h2 className="text-base font-black text-gray-800 uppercase tracking-widest">Calculadora Inteligente</h2>
                       </div>
                       {isLoadingDistance && (
-                        <div className="flex items-center space-x-1">
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce"></div>
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce delay-75"></div>
-                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce delay-150"></div>
+                        <div className="flex items-center space-x-1.5 px-3 py-1 bg-blue-50 rounded-full text-blue-600 text-xs font-bold animate-pulse">
+                          <span>PROCESSANDO</span>
                         </div>
                       )}
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                       <LocationAutocompleteInput 
-                          label="Onde você está?" 
+                          label="Ponto de Partida" 
                           value={origin} 
                           onChange={setOrigin} 
-                          placeholder="Origem (Endereço ou GPS)..." 
+                          placeholder="Digite o endereço de origem..." 
                           onUseCurrentLocation={handleUseCurrentLocation}
                       />
                       <LocationAutocompleteInput 
-                          label="Para onde você vai?" 
+                          label="Destino da Viagem" 
                           value={destination} 
                           onChange={setDestination} 
-                          placeholder="Cidade ou local de destino..." 
+                          placeholder="Digite a cidade ou local..." 
                       />
                   </div>
                   
@@ -299,23 +302,67 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                       <button 
                           onClick={handleCalculateRoute}
                           disabled={isLoadingDistance}
-                          className={`w-full md:w-auto px-10 py-3 rounded-full text-xs font-black text-white uppercase shadow-lg active:scale-95 transition-all ${isLoadingDistance ? 'bg-gray-300 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                          className={`w-full md:w-auto px-12 py-4 rounded-2xl text-sm font-black text-white uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                       >
-                          {isLoadingDistance ? 'Consultando Mapas...' : 'Calcular Rota em Real Time'}
+                          {isLoadingDistance ? (
+                              <>
+                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                <span>Calculando KM...</span>
+                              </>
+                          ) : (
+                              <>
+                                <MapPinIcon className="w-4 h-4" />
+                                <span>Calcular Valor via Google Maps</span>
+                              </>
+                          )}
                       </button>
                       
                       {distanceError && (
-                        <div className="mt-3 p-2 bg-red-50 border border-red-100 rounded-lg">
-                          <p className="text-red-500 text-[10px] font-bold text-center uppercase">{distanceError}</p>
+                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl w-full max-w-md">
+                          <p className="text-red-600 text-xs font-bold text-center uppercase tracking-wide">{distanceError}</p>
                         </div>
                       )}
                       
                       {calculatedDistance !== null && (
-                          <div className="mt-6 text-center animate-in slide-in-from-bottom-4 duration-500">
-                              <div className="inline-block p-1 bg-green-50 rounded-full px-4 mb-2">
-                                <span className="text-green-700 text-[10px] font-black uppercase tracking-tighter">Distância: {calculatedDistance.toFixed(1).replace('.', ',')} km</span>
+                          <div className="mt-8 text-center animate-in slide-in-from-bottom-6 duration-500 w-full max-w-lg">
+                              <div className="inline-flex flex-col items-center mb-4">
+                                  <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Distância Rodoviária</span>
+                                  <span className="text-2xl font-black text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} KM</span>
                               </div>
-                              <p className="text-4xl font-black text-green-600 drop-shadow-sm">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                              
+                              <div className="bg-green-50 rounded-3xl p-6 border-2 border-green-100 shadow-inner">
+                                  <span className="text-green-600 text-xs font-black uppercase tracking-widest mb-2 block">Valor Total Estimado</span>
+                                  <p className="text-5xl font-black text-green-700 drop-shadow-sm">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                              </div>
+
+                              {/* NOVO LAYOUT DE FONTES / GROUNDING */}
+                              {sources.length > 0 && (
+                                <div className="mt-8 pt-6 border-t border-gray-100 text-left">
+                                    <div className="flex items-center mb-3">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Confirmação de Trajeto</h3>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        {sources.map((source, idx) => (
+                                            <a 
+                                                key={idx} 
+                                                href={source.uri} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="flex items-center p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group shadow-sm"
+                                            >
+                                                <div className="p-2 bg-white rounded-lg border border-gray-200 mr-3 group-hover:border-blue-200 shadow-sm transition-colors">
+                                                    <MapPinIcon className="w-5 h-5 text-blue-500" />
+                                                </div>
+                                                <div className="flex-1 overflow-hidden">
+                                                    <p className="text-[13px] font-black text-gray-700 truncate group-hover:text-blue-700 transition-colors uppercase">{source.title}</p>
+                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Ver no Google Maps</span>
+                                                </div>
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
+                              )}
                           </div>
                       )}
                   </div>
@@ -323,66 +370,72 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             )}
 
             {/* Cabeçalho da Listagem com Filtros Duplos */}
-            <div className="flex flex-col xl:flex-row justify-between items-center gap-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-                <h2 className="text-sm font-black text-gray-700 uppercase tracking-widest">Viagens Longas Salvas</h2>
-                <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto">
+            <div className="flex flex-col xl:flex-row justify-between items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <div className="flex items-center">
+                    <div className="w-1.5 h-6 bg-yellow-400 rounded-full mr-3"></div>
+                    <h2 className="text-base font-black text-gray-800 uppercase tracking-widest">Destinos Frequentes</h2>
+                </div>
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
                     {/* Busca por Cidade */}
-                    <div className="relative flex-1 sm:w-48">
+                    <div className="relative flex-1 sm:w-64">
                         <input
                             type="text"
-                            placeholder="Buscar cidade..."
+                            placeholder="Buscar destino salvo..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pr-8 pl-3 py-2 text-xs border border-gray-100 rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50"
+                            className="w-full pr-10 pl-4 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50"
                         />
                         {searchTerm && (
                             <button 
                                 onClick={() => setSearchTerm('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
                             >
-                                <XIcon className="w-3.5 h-3.5" />
+                                <XIcon className="w-4 h-4" />
                             </button>
                         )}
                     </div>
                     {/* Busca por KM */}
-                    <div className="relative flex-1 sm:w-32">
+                    <div className="relative flex-1 sm:w-40">
                         <input
                             type="text"
-                            placeholder="Filtrar KM..."
+                            placeholder="KM..."
                             value={kmSearchTerm}
                             onChange={(e) => setKmSearchTerm(e.target.value)}
-                            className="w-full pr-8 pl-3 py-2 text-xs border border-gray-100 rounded-lg focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-bold"
+                            className="w-full pr-10 pl-4 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-black"
                         />
                         {kmSearchTerm && (
                             <button 
                                 onClick={() => setKmSearchTerm('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
+                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
                             >
-                                <XIcon className="w-3.5 h-3.5" />
+                                <XIcon className="w-4 h-4" />
                             </button>
                         )}
                     </div>
                     {isAdmin && (
                         <button
                             onClick={() => { setEditingTrip(null); setIsModalOpen(true); }}
-                            className="bg-yellow-400 text-gray-900 font-black px-3 py-2 rounded-lg text-[10px] uppercase hover:bg-yellow-500 shadow-sm"
+                            className="bg-yellow-400 text-gray-900 font-black px-4 py-3 rounded-xl text-xs uppercase hover:bg-yellow-500 shadow-md flex items-center transition-transform active:scale-95"
                         >
-                            <PlusIcon className="w-3.5 h-3.5" />
+                            <PlusIcon className="w-4 h-4 mr-2" /> Novo
                         </button>
                     )}
                 </div>
             </div>
 
             {isAdmin && (
-                <div className="p-3 bg-white rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Preço/KM Base (Admin)</label>
-                    <div className="flex items-center border border-gray-100 rounded-lg overflow-hidden bg-gray-50 px-2">
-                        <span className="text-[10px] text-gray-400 font-bold mr-1">R$</span>
+                <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                    <div className="flex flex-col">
+                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Taxa Base p/ Viagens Longas (Admin)</label>
+                        <span className="text-[10px] text-blue-500 font-bold uppercase">Ajuste o valor por KM rodado</span>
+                    </div>
+                    <div className="flex items-center border-2 border-yellow-100 rounded-xl overflow-hidden bg-yellow-50 px-3">
+                        <span className="text-sm text-yellow-600 font-black mr-2">R$</span>
                         <input
                             type="number"
                             value={pricePerKm}
                             onChange={(e) => setPricePerKm(parseFloat(e.target.value) || 0)}
-                            className="w-14 py-1.5 text-xs font-black bg-transparent outline-none text-gray-700"
+                            className="w-20 py-3 text-sm font-black bg-transparent outline-none text-gray-800"
                             step="0.01"
                         />
                     </div>
@@ -390,58 +443,60 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             )}
 
             {/* Tabela de Viagens Longas */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <table className="w-full text-left">
-                    <thead className="hidden md:table-header-group bg-gray-50">
+                    <thead className="hidden md:table-header-group bg-gray-50/80">
                         <tr>
-                            <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase">Cidade</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase">KM</th>
-                            <th className="px-4 py-3 text-[10px] font-black text-gray-400 uppercase">Valor</th>
-                            {isAdmin && <th className="px-4 py-3"></th>}
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Cidade/Destino</th>
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Distância</th>
+                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Preço Estimado</th>
+                            {isAdmin && <th className="px-6 py-4"></th>}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {longTrips.length > 0 ? longTrips.map((trip) => (
-                            <tr key={trip.id} className="block md:table-row hover:bg-yellow-50/20">
-                                <td className="p-3 md:px-4 md:py-3 block md:table-cell">
+                            <tr key={trip.id} className="block md:table-row hover:bg-yellow-50/30 transition-colors">
+                                <td className="p-4 md:px-6 md:py-4 block md:table-cell">
                                     <div className="flex justify-between items-center md:block">
-                                        <span className="font-bold text-[9px] text-gray-400 md:hidden uppercase">Cidade</span>
-                                        <span className="text-xs font-bold text-gray-800">{trip.city}</span>
+                                        <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Destino</span>
+                                        <span className="text-sm font-black text-gray-800 uppercase tracking-tight">{trip.city}</span>
                                     </div>
                                 </td>
-                                <td className="px-3 py-1 md:px-4 md:py-3 block md:table-cell">
+                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell">
                                     <div className="flex justify-between items-center md:block">
-                                        <span className="font-bold text-[9px] text-gray-400 md:hidden uppercase">KM</span>
-                                        <span className="text-[10px] text-gray-500 font-medium">{trip.kilometers.toFixed(1).replace('.', ',')} km</span>
+                                        <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Distância</span>
+                                        <span className="text-sm text-gray-600 font-bold">{trip.kilometers.toFixed(1).replace('.', ',')} KM</span>
                                     </div>
                                 </td>
-                                <td className="p-3 md:px-4 md:py-3 block md:table-cell bg-yellow-50/30 md:bg-transparent rounded-b-lg md:rounded-none">
+                                <td className="p-4 md:px-6 md:py-4 block md:table-cell bg-yellow-50/20 md:bg-transparent rounded-b-xl md:rounded-none border-t md:border-t-0 mt-2 md:mt-0">
                                     <div className="flex justify-between items-center md:block">
-                                        <span className="font-bold text-[9px] text-gray-400 md:hidden uppercase">Valor</span>
-                                        <span className="text-sm text-gray-900 font-black">R$ {(trip.kilometers * pricePerKm).toFixed(2).replace('.', ',')}</span>
+                                        <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Preço</span>
+                                        <span className="text-base text-gray-900 font-black">R$ {(trip.kilometers * pricePerKm).toFixed(2).replace('.', ',')}</span>
                                     </div>
                                 </td>
                                 {isAdmin && (
-                                    <td className="px-3 py-2 md:px-4 md:py-3 block md:table-cell text-right">
-                                        <div className="flex items-center justify-end space-x-2">
+                                    <td className="px-4 py-3 md:px-6 md:py-4 block md:table-cell text-right">
+                                        <div className="flex items-center justify-end space-x-3">
                                             <button 
                                                 onClick={() => { setEditingTrip(trip); setIsModalOpen(true); }} 
-                                                className="p-1 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
+                                                className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-all"
+                                                title="Editar"
                                             >
-                                                <PencilIcon className="w-3.5 h-3.5" />
+                                                <PencilIcon className="w-5 h-5" />
                                             </button>
                                             <button 
-                                                onClick={() => { if (window.confirm('Excluir?')) onDeleteLongTrip(trip.id); }} 
-                                                className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                                onClick={() => { if (window.confirm('Excluir destino salvo?')) onDeleteLongTrip(trip.id); }} 
+                                                className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all"
+                                                title="Excluir"
                                             >
-                                                <TrashIcon className="w-3.5 h-3.5" />
+                                                <TrashIcon className="w-5 h-5" />
                                             </button>
                                         </div>
                                     </td>
                                 )}
                             </tr>
                         )) : (
-                            <tr><td colSpan={isAdmin ? 4 : 3} className="p-10 text-center text-gray-400 text-xs italic">Nenhuma viagem encontrada com estes filtros.</td></tr>
+                            <tr><td colSpan={isAdmin ? 4 : 3} className="p-16 text-center text-gray-400 text-sm font-medium italic">Nenhum registro encontrado para a busca.</td></tr>
                         )}
                     </tbody>
                 </table>
