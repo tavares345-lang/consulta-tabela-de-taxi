@@ -19,10 +19,8 @@ const App: React.FC = () => {
   const [longTripSearchTerm, setLongTripSearchTerm] = useState<string>('');
   const [longTripKmSearchTerm, setLongTripKmSearchTerm] = useState<string>('');
   
-  // Lazy initialization ensures we read from localStorage correctly on mount
   const [pricePerKm, setPricePerKm] = useState<number>(() => fareService.getPricePerKm());
 
-  // Sync data across tabs/windows to ensure users receive updates
   useEffect(() => {
     const handleStorageChange = () => {
       setFares(fareService.getFares());
@@ -43,7 +41,6 @@ const App: React.FC = () => {
   }, [longTrips]);
 
   useEffect(() => {
-    // Only store if it's a valid number to prevent overwriting with bad data
     if (!isNaN(pricePerKm)) {
         fareService.storePricePerKm(pricePerKm);
     }
@@ -74,15 +71,36 @@ const App: React.FC = () => {
 
   const filteredLongTrips = React.useMemo(() => {
     return longTrips.filter(trip => {
-        const matchesCity = trip.city.toLowerCase().includes(longTripSearchTerm.toLowerCase());
-        const matchesKm = longTripKmSearchTerm === '' || 
-                         trip.kilometers.toString().includes(longTripKmSearchTerm.replace(',', '.'));
+        const cityLower = trip.city.toLowerCase();
+        const searchLower = longTripSearchTerm.toLowerCase().trim();
+        const matchesCity = cityLower.includes(searchLower);
+        
+        const kmInput = longTripKmSearchTerm.trim().replace(',', '.');
+        const searchNum = parseFloat(kmInput);
+        const isSearchNumValid = !isNaN(searchNum) && kmInput !== '';
+
+        let matchesKm = true;
+        if (kmInput !== '') {
+            // Busca textual no KM
+            const stringIncludes = trip.kilometers.toString().includes(kmInput);
+            // Tolerância inteligente de 5% ou 5km (o que for maior) para lidar com variações de rota do Maps
+            const tolerance = Math.max(5, trip.kilometers * 0.05);
+            const proximityMatch = isSearchNumValid && Math.abs(trip.kilometers - searchNum) <= tolerance;
+            
+            matchesKm = stringIncludes || proximityMatch;
+        }
+
+        // Se houver busca por nome, não filtramos por KM a menos que o KM seja o único filtro
+        // Isso resolve o problema da tabela sumir quando o GPS dá um valor diferente do salvo
+        if (searchLower !== '' && longTripKmSearchTerm === '') {
+            return matchesCity;
+        }
+        
         return matchesCity && matchesKm;
     });
   }, [longTrips, longTripSearchTerm, longTripKmSearchTerm]);
 
   const handleAddFare = (newFare: Fare) => {
-    // Adiciona ao final da lista
     setFares(prevFares => [...prevFares, newFare]);
   };
 
@@ -99,7 +117,6 @@ const App: React.FC = () => {
   };
 
   const handleAddLongTrip = (newTrip: LongTrip) => {
-    // Adiciona ao final da lista
     setLongTrips(prev => [...prev, newTrip]);
   };
 
@@ -149,10 +166,11 @@ const App: React.FC = () => {
             onAddLongTrip={handleAddLongTrip}
             onUpdateLongTrip={handleUpdateLongTrip}
             onDeleteLongTrip={handleDeleteLongTrip}
+            allLongTrips={longTrips}
           />
         );
       case 'users':
-        return isAdmin ? <UserManagement /> : <p className="text-xl">Acesso negado.</p>;
+        return isAdmin ? <UserManagement /> : <div className="text-center py-20 font-black text-gray-400 uppercase tracking-widest">Acesso Restrito ao Admin</div>;
       default:
         return null;
     }
@@ -166,11 +184,11 @@ const App: React.FC = () => {
         activeView={activeView}
         onViewChange={setActiveView}
       />
-      <main className="p-3 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <main className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
         {renderActiveView()}
       </main>
-      <footer className="text-center p-6 text-gray-500 text-xs">
-        <p>&copy; {new Date().getFullYear()} TABELA TÁXI. Todos os direitos reservados.</p>
+      <footer className="text-center p-8 text-gray-400 text-sm font-bold uppercase tracking-widest">
+        <p>&copy; {new Date().getFullYear()} TABELA TÁXI • CONSULTA RÁPIDA</p>
       </footer>
     </div>
   );

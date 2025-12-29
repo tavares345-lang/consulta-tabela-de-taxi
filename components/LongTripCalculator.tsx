@@ -74,19 +74,19 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
   return (
     <div className="relative" ref={wrapperRef}>
         <div className="flex items-center justify-between mb-2">
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-tighter">{label}</label>
+            <label className="block text-sm font-black text-gray-500 uppercase tracking-tighter">{label}</label>
             {onUseCurrentLocation && (
                 <button 
                     onClick={(e) => { e.preventDefault(); onUseCurrentLocation(); }}
-                    className="text-[11px] font-black text-blue-600 uppercase hover:text-blue-800 flex items-center bg-blue-50 px-3 py-1 rounded-full transition-colors"
+                    className="text-xs font-black text-blue-600 uppercase hover:text-blue-800 flex items-center bg-blue-50 px-4 py-2 rounded-xl transition-colors"
                 >
-                    <MapPinIcon className="w-3.5 h-3.5 mr-1" /> GPS
+                    <MapPinIcon className="w-4 h-4 mr-1.5" /> USAR GPS
                 </button>
             )}
         </div>
         <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
-                <MapPinIcon className="w-4 h-4" />
+            <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
+                <MapPinIcon className="w-5 h-5" />
             </span>
             <input 
                 type="text" 
@@ -97,27 +97,27 @@ const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ l
                 }}
                 onFocus={() => setShowSuggestions(true)}
                 placeholder={placeholder}
-                className="w-full pl-10 pr-10 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 outline-none bg-gray-50 shadow-sm"
+                className="w-full pl-12 pr-12 py-4 text-base border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 outline-none bg-white shadow-sm font-medium"
                 autoComplete="off"
             />
             {value && (
               <button 
                   onClick={() => onChange('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-500"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-gray-500"
               >
-                  <XIcon className="w-4 h-4" />
+                  <XIcon className="w-5 h-5" />
               </button>
             )}
         </div>
         
         {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-30 w-full bg-white mt-2 rounded-xl shadow-2xl max-h-60 overflow-y-auto border border-gray-100 animate-in fade-in zoom-in duration-150">
+            <div className="absolute z-30 w-full bg-white mt-2 rounded-2xl shadow-2xl max-h-72 overflow-y-auto border border-gray-100 animate-in fade-in zoom-in duration-150">
                 <ul>
                     {suggestions.map((suggestion, index) => (
                         <li 
                             key={index}
                             onMouseDown={(e) => { e.preventDefault(); handleSelect(suggestion); }}
-                            className="px-4 py-3 hover:bg-blue-50 cursor-pointer text-sm text-gray-700 border-b last:border-b-0 border-gray-50 font-medium"
+                            className="px-5 py-4 hover:bg-blue-50 cursor-pointer text-base text-gray-700 border-b last:border-b-0 border-gray-50 font-bold"
                         >
                             {suggestion}
                         </li>
@@ -158,21 +158,21 @@ const LongTripModal: React.FC<LongTripModalProps> = ({ trip, onSave, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-40 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md animate-in zoom-in duration-200">
-        <h2 className="text-xl font-black mb-6 text-gray-800">CADASTRAR DESTINO</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-40 p-4 backdrop-blur-md">
+      <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-lg animate-in zoom-in duration-200">
+        <h2 className="text-2xl font-black mb-8 text-gray-800 uppercase tracking-tight">Novo Destino Fixo</h2>
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Cidade/Destino</label>
-              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Ex: Rio de Janeiro" className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-sm" required />
+              <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-1">Cidade / Destino</label>
+              <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Ex: Divinópolis" className="w-full p-4 text-base border border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-sm" required />
           </div>
           <div>
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-2">Distância (KM)</label>
-              <input type="number" name="kilometers" value={formData.kilometers} onChange={handleChange} placeholder="0" className="w-full p-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-sm font-bold" step="0.1" required />
+              <label className="block text-xs font-black text-gray-400 uppercase mb-2 ml-1">Distância (KM)</label>
+              <input type="number" name="kilometers" value={formData.kilometers} onChange={handleChange} placeholder="0" className="w-full p-4 text-base border border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none shadow-sm font-black" step="0.1" required />
           </div>
-          <div className="flex justify-end space-x-3 pt-6">
-            <button type="button" onClick={onClose} className="px-6 py-3 text-sm font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors uppercase">Cancelar</button>
-            <button type="submit" className="px-6 py-3 text-sm font-black bg-yellow-400 text-gray-900 rounded-xl hover:bg-yellow-500 transition-colors shadow-md uppercase">Salvar Destino</button>
+          <div className="flex justify-end space-x-4 pt-8">
+            <button type="button" onClick={onClose} className="px-8 py-4 text-sm font-black text-gray-500 hover:bg-gray-100 rounded-2xl transition-colors uppercase tracking-widest">Cancelar</button>
+            <button type="submit" className="px-8 py-4 text-sm font-black bg-yellow-400 text-gray-900 rounded-2xl hover:bg-yellow-500 transition-colors shadow-lg uppercase tracking-widest">Confirmar</button>
           </div>
         </form>
       </div>
@@ -182,6 +182,7 @@ const LongTripModal: React.FC<LongTripModalProps> = ({ trip, onSave, onClose }) 
 
 interface LongTripCalculatorProps {
   longTrips: LongTrip[];
+  allLongTrips: LongTrip[];
   isAdmin: boolean;
   pricePerKm: number;
   setPricePerKm: (price: number) => void;
@@ -195,7 +196,7 @@ interface LongTripCalculatorProps {
 }
 
 const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({ 
-    longTrips, isAdmin, pricePerKm, setPricePerKm, searchTerm, setSearchTerm, 
+    longTrips, allLongTrips, isAdmin, pricePerKm, setPricePerKm, searchTerm, setSearchTerm, 
     kmSearchTerm, setKmSearchTerm,
     onAddLongTrip, onUpdateLongTrip, onDeleteLongTrip 
 }) => {
@@ -205,30 +206,33 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [origin, setOrigin] = useState('Aeroporto Internacional de Confins - Tancredo Neves');
     const [destination, setDestination] = useState('');
     const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
-    const [sources, setSources] = useState<{ title: string; uri: string }[]>([]);
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
 
+    const isFiltered = searchTerm !== '' || kmSearchTerm !== '';
+
+    // Encontrar se o destino atual já existe na tabela fixa para comparação
+    const matchedSavedTrip = allLongTrips.find(t => 
+        destination.toLowerCase().includes(t.city.toLowerCase()) || 
+        t.city.toLowerCase().includes(destination.toLowerCase())
+    );
+
     const handleUseCurrentLocation = () => {
         if (!navigator.geolocation) {
-            alert("Seu navegador não suporta geolocalização.");
+            alert("Navegador sem suporte a GPS.");
             return;
         }
-
         setIsLoadingDistance(true);
         navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const { latitude, longitude } = position.coords;
-                setOrigin(`${latitude}, ${longitude}`);
+            (pos) => {
+                setOrigin(`${pos.coords.latitude}, ${pos.coords.longitude}`);
                 setIsLoadingDistance(false);
             },
-            (error) => {
-                let msg = "Não foi possível obter sua localização.";
-                if (error.code === 1) msg = "Permissão de localização negada.";
-                alert(msg);
+            () => {
+                alert("Erro ao obter GPS.");
                 setIsLoadingDistance(false);
             },
-            { enableHighAccuracy: true, timeout: 8000 }
+            { enableHighAccuracy: true }
         );
     };
 
@@ -237,20 +241,33 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setIsLoadingDistance(true);
         setDistanceError(null);
         setCalculatedDistance(null);
-        setSources([]);
 
         try {
             const result: DistanceResult = await getDistance(origin, destination);
             if (result.distance !== null && result.distance > 0) {
                 setCalculatedDistance(result.distance);
-                setSources(result.sources || []);
+                // Se o usuário já estiver pesquisando por nome, mantemos o nome e preenchemos o KM apenas para destacar
+                if (!searchTerm) setSearchTerm(destination);
+                setKmSearchTerm(Math.floor(result.distance).toString());
             } else {
-                setDistanceError("Distância não encontrada. Tente refinar os endereços.");
+                setDistanceError("Rota não localizada. Tente endereços mais simples.");
             }
         } catch (error) {
-            setDistanceError("Falha na conexão com o serviço de mapas.");
+            setDistanceError("Erro de comunicação com o servidor de mapas.");
         } finally {
             setIsLoadingDistance(false);
+        }
+    };
+
+    const handleSyncWithGPS = () => {
+        if (isAdmin && matchedSavedTrip && calculatedDistance) {
+            if (confirm(`Deseja atualizar a quilometragem de "${matchedSavedTrip.city}" de ${matchedSavedTrip.kilometers}km para ${calculatedDistance.toFixed(1)}km na tabela fixa?`)) {
+                onUpdateLongTrip({
+                    ...matchedSavedTrip,
+                    kilometers: parseFloat(calculatedDistance.toFixed(1))
+                });
+                alert("Tabela atualizada com sucesso!");
+            }
         }
     };
 
@@ -261,40 +278,45 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         setEditingTrip(null);
     };
 
+    const clearFilters = () => {
+        setSearchTerm('');
+        setKmSearchTerm('');
+    };
+
     return (
-        <div className="space-y-6">
+        <div className="space-y-10">
             {isModalOpen && <LongTripModal key={editingTrip?.id || 'new'} trip={editingTrip} onSave={handleSave} onClose={() => setIsModalOpen(false)} />}
            
-            {/* Seção de Cálculo Dinâmico - APENAS ADMIN */}
+            {/* Calculadora Dinâmica - EXCLUSIVA PARA ADMIN */}
             {isAdmin && (
-              <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-100 border-l-8 border-l-blue-600">
-                  <div className="flex items-center justify-between mb-6">
+              <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 border-l-[12px] border-l-blue-600 animate-in slide-in-from-top-6 duration-500">
+                  <div className="flex items-center justify-between mb-8">
                       <div className="flex items-center">
-                        <div className="p-2 bg-blue-100 rounded-lg mr-3">
-                            <CarIcon className="w-6 h-6 text-blue-600" />
+                        <div className="p-3 bg-blue-100 rounded-2xl mr-4">
+                            <CarIcon className="w-8 h-8 text-blue-600" />
                         </div>
-                        <h2 className="text-base font-black text-gray-800 uppercase tracking-widest">Calculadora Inteligente</h2>
+                        <h2 className="text-xl font-black text-gray-800 uppercase tracking-widest">Painel de Cálculo Inteligente</h2>
                       </div>
                       {isLoadingDistance && (
-                        <div className="flex items-center space-x-1.5 px-3 py-1 bg-blue-50 rounded-full text-blue-600 text-xs font-bold animate-pulse">
-                          <span>PROCESSANDO</span>
+                        <div className="flex items-center space-x-2 px-4 py-2 bg-blue-50 rounded-full text-blue-600 text-sm font-black animate-pulse">
+                          <span>IA CALCULANDO</span>
                         </div>
                       )}
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
                       <LocationAutocompleteInput 
                           label="Ponto de Partida" 
                           value={origin} 
                           onChange={setOrigin} 
-                          placeholder="Digite o endereço de origem..." 
+                          placeholder="Endereço ou local de saída..." 
                           onUseCurrentLocation={handleUseCurrentLocation}
                       />
                       <LocationAutocompleteInput 
-                          label="Destino da Viagem" 
+                          label="Destino Final" 
                           value={destination} 
                           onChange={setDestination} 
-                          placeholder="Digite a cidade ou local..." 
+                          placeholder="Cidade ou local de chegada..." 
                       />
                   </div>
                   
@@ -302,204 +324,228 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                       <button 
                           onClick={handleCalculateRoute}
                           disabled={isLoadingDistance}
-                          className={`w-full md:w-auto px-12 py-4 rounded-2xl text-sm font-black text-white uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center space-x-2 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
+                          className={`w-full md:w-auto px-16 py-5 rounded-2xl text-base font-black text-white uppercase shadow-2xl active:scale-95 transition-all flex items-center justify-center space-x-3 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
                       >
                           {isLoadingDistance ? (
-                              <>
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                <span>Calculando KM...</span>
-                              </>
-                          ) : (
-                              <>
-                                <MapPinIcon className="w-4 h-4" />
-                                <span>Calcular Valor via Google Maps</span>
-                              </>
-                          )}
+                              <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          ) : <MapPinIcon className="w-6 h-6" />}
+                          <span>{isLoadingDistance ? 'Calculando Rota...' : 'Calcular com Google Maps'}</span>
                       </button>
                       
                       {distanceError && (
-                        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl w-full max-w-md">
-                          <p className="text-red-600 text-xs font-bold text-center uppercase tracking-wide">{distanceError}</p>
+                        <div className="mt-6 p-4 bg-red-50 border-2 border-red-100 rounded-2xl w-full max-w-md">
+                          <p className="text-red-600 text-sm font-black text-center uppercase tracking-widest">{distanceError}</p>
                         </div>
                       )}
                       
                       {calculatedDistance !== null && (
-                          <div className="mt-8 text-center animate-in slide-in-from-bottom-6 duration-500 w-full max-w-lg">
-                              <div className="inline-flex flex-col items-center mb-4">
-                                  <span className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Distância Rodoviária</span>
-                                  <span className="text-2xl font-black text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} KM</span>
-                              </div>
-                              
-                              <div className="bg-green-50 rounded-3xl p-6 border-2 border-green-100 shadow-inner">
-                                  <span className="text-green-600 text-xs font-black uppercase tracking-widest mb-2 block">Valor Total Estimado</span>
-                                  <p className="text-5xl font-black text-green-700 drop-shadow-sm">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                          <div className="mt-10 w-full max-w-4xl space-y-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                                  {/* Card do Google Maps */}
+                                  <div className="bg-gray-50 p-8 rounded-[40px] border-2 border-blue-100 shadow-inner">
+                                      <span className="text-blue-500 text-xs font-black uppercase tracking-widest mb-1 block">Google Maps (Tempo Real)</span>
+                                      <span className="text-5xl font-black text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} KM</span>
+                                      <p className="mt-4 text-sm text-gray-500 font-bold uppercase">Valor: R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                                  </div>
+
+                                  {/* Card de Comparação com Tabela Fixa */}
+                                  <div className={`p-8 rounded-[40px] border-2 flex flex-col justify-center ${matchedSavedTrip ? 'bg-yellow-50 border-yellow-200' : 'bg-gray-50 border-gray-200 opacity-60'}`}>
+                                      <span className="text-gray-400 text-xs font-black uppercase tracking-widest mb-1 block">Tabela Fixa Cadastrada</span>
+                                      {matchedSavedTrip ? (
+                                          <div>
+                                              <span className="text-3xl font-black text-gray-800">{matchedSavedTrip.kilometers.toFixed(1).replace('.', ',')} KM</span>
+                                              <div className="mt-2 flex items-center space-x-2">
+                                                  {Math.abs(calculatedDistance - matchedSavedTrip.kilometers) > 5 ? (
+                                                      <span className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">Divergência: {(calculatedDistance - matchedSavedTrip.kilometers).toFixed(1)} KM</span>
+                                                  ) : (
+                                                      <span className="bg-green-100 text-green-600 px-3 py-1 rounded-full text-[10px] font-black uppercase">Dados Batem</span>
+                                                  )}
+                                              </div>
+                                              {isAdmin && (
+                                                  <button 
+                                                      onClick={handleSyncWithGPS}
+                                                      className="mt-4 w-full bg-yellow-400 text-gray-900 py-3 rounded-xl text-xs font-black uppercase hover:bg-yellow-500 shadow-sm"
+                                                  >
+                                                      Sincronizar Tabela
+                                                  </button>
+                                              )}
+                                          </div>
+                                      ) : (
+                                          <p className="text-sm text-gray-400 font-bold uppercase italic mt-2">Destino não encontrado na tabela fixa.</p>
+                                      )}
+                                  </div>
                               </div>
 
-                              {/* NOVO LAYOUT DE FONTES / GROUNDING */}
-                              {sources.length > 0 && (
-                                <div className="mt-8 pt-6 border-t border-gray-100 text-left">
-                                    <div className="flex items-center mb-3">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
-                                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-widest">Confirmação de Trajeto</h3>
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        {sources.map((source, idx) => (
-                                            <a 
-                                                key={idx} 
-                                                href={source.uri} 
-                                                target="_blank" 
-                                                rel="noopener noreferrer"
-                                                className="flex items-center p-3 bg-gray-50 border border-gray-100 rounded-xl hover:border-blue-300 hover:bg-blue-50 transition-all group shadow-sm"
-                                            >
-                                                <div className="p-2 bg-white rounded-lg border border-gray-200 mr-3 group-hover:border-blue-200 shadow-sm transition-colors">
-                                                    <MapPinIcon className="w-5 h-5 text-blue-500" />
-                                                </div>
-                                                <div className="flex-1 overflow-hidden">
-                                                    <p className="text-[13px] font-black text-gray-700 truncate group-hover:text-blue-700 transition-colors uppercase">{source.title}</p>
-                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Ver no Google Maps</span>
-                                                </div>
-                                            </a>
-                                        ))}
-                                    </div>
-                                </div>
-                              )}
+                              <div className="bg-green-600 rounded-[50px] p-12 shadow-2xl border-8 border-white ring-12 ring-green-50 animate-in zoom-in duration-500">
+                                  <span className="text-white/80 text-sm font-black uppercase tracking-widest mb-2 block">Orçamento Final Sugerido</span>
+                                  <p className="text-7xl font-black text-white drop-shadow-lg">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
+                              </div>
                           </div>
                       )}
                   </div>
               </div>
             )}
 
-            {/* Cabeçalho da Listagem com Filtros Duplos */}
-            <div className="flex flex-col xl:flex-row justify-between items-center gap-4 p-4 bg-white rounded-2xl shadow-sm border border-gray-100">
-                <div className="flex items-center">
-                    <div className="w-1.5 h-6 bg-yellow-400 rounded-full mr-3"></div>
-                    <h2 className="text-base font-black text-gray-800 uppercase tracking-widest">Destinos Frequentes</h2>
-                </div>
-                <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-                    {/* Busca por Cidade */}
-                    <div className="relative flex-1 sm:w-64">
-                        <input
-                            type="text"
-                            placeholder="Buscar destino salvo..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pr-10 pl-4 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50"
-                        />
-                        {searchTerm && (
-                            <button 
-                                onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
-                            >
-                                <XIcon className="w-4 h-4" />
-                            </button>
-                        )}
+            {/* Listagem Fixa para todos os usuários com BUSCA APRIMORADA */}
+            <div className="space-y-6">
+                <div className="bg-white rounded-3xl shadow-md border border-gray-100 p-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                        <div className="flex items-center">
+                            <div className="w-2 h-8 bg-yellow-400 rounded-full mr-4"></div>
+                            <div>
+                                <h2 className="text-xl font-black text-gray-800 uppercase tracking-widest">Tabela de Viagens Longas</h2>
+                                <p className="text-[11px] text-gray-400 font-bold uppercase mt-0.5">Consulte destinos fixos e valores pré-definidos</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            <span className="bg-yellow-100 text-yellow-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-tighter">
+                                {longTrips.length} {longTrips.length === 1 ? 'Destino Encontrado' : 'Destinos Encontrados'}
+                            </span>
+                            {isFiltered && (
+                                <button 
+                                    onClick={clearFilters}
+                                    className="text-[11px] font-black text-red-500 uppercase hover:underline flex items-center"
+                                >
+                                    <XIcon className="w-3.5 h-3.5 mr-1" /> Limpar Filtros
+                                </button>
+                            )}
+                        </div>
                     </div>
-                    {/* Busca por KM */}
-                    <div className="relative flex-1 sm:w-40">
-                        <input
-                            type="text"
-                            placeholder="KM..."
-                            value={kmSearchTerm}
-                            onChange={(e) => setKmSearchTerm(e.target.value)}
-                            className="w-full pr-10 pl-4 py-3 text-sm border border-gray-200 rounded-xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-black"
-                        />
-                        {kmSearchTerm && (
-                            <button 
-                                onClick={() => setKmSearchTerm('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-gray-300 hover:text-gray-600"
-                            >
-                                <XIcon className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-                    {isAdmin && (
-                        <button
-                            onClick={() => { setEditingTrip(null); setIsModalOpen(true); }}
-                            className="bg-yellow-400 text-gray-900 font-black px-4 py-3 rounded-xl text-xs uppercase hover:bg-yellow-500 shadow-md flex items-center transition-transform active:scale-95"
-                        >
-                            <PlusIcon className="w-4 h-4 mr-2" /> Novo
-                        </button>
-                    )}
-                </div>
-            </div>
 
-            {isAdmin && (
-                <div className="p-4 bg-white rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
-                    <div className="flex flex-col">
-                        <label className="text-xs font-black text-gray-400 uppercase tracking-widest mb-1">Taxa Base p/ Viagens Longas (Admin)</label>
-                        <span className="text-[10px] text-blue-500 font-bold uppercase">Ajuste o valor por KM rodado</span>
-                    </div>
-                    <div className="flex items-center border-2 border-yellow-100 rounded-xl overflow-hidden bg-yellow-50 px-3">
-                        <span className="text-sm text-yellow-600 font-black mr-2">R$</span>
-                        <input
-                            type="number"
-                            value={pricePerKm}
-                            onChange={(e) => setPricePerKm(parseFloat(e.target.value) || 0)}
-                            className="w-20 py-3 text-sm font-black bg-transparent outline-none text-gray-800"
-                            step="0.01"
-                        />
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                        <div className="xl:col-span-7 relative">
+                             <span className="absolute inset-y-0 left-0 pl-5 flex items-center text-gray-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </span>
+                            <input
+                                type="text"
+                                placeholder="Pesquisar por cidade ou destino..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pr-12 pl-14 py-5 text-lg border border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-medium shadow-inner placeholder:text-gray-300"
+                            />
+                            {searchTerm && (
+                                <button onClick={() => setSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600">
+                                    <XIcon className="w-6 h-6" />
+                                </button>
+                            )}
+                        </div>
+                        <div className="xl:col-span-3 relative">
+                            <input
+                                type="text"
+                                placeholder="KM..."
+                                value={kmSearchTerm}
+                                onChange={(e) => setKmSearchTerm(e.target.value)}
+                                className="w-full pr-12 pl-6 py-5 text-lg border border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-black shadow-inner placeholder:text-gray-300"
+                            />
+                            {kmSearchTerm && (
+                                <button onClick={() => setKmSearchTerm('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600">
+                                    <XIcon className="w-6 h-6" />
+                                </button>
+                            )}
+                        </div>
+                        <div className="xl:col-span-2">
+                            {isAdmin && (
+                                <button
+                                    onClick={() => { setEditingTrip(null); setIsModalOpen(true); }}
+                                    className="w-full bg-yellow-400 text-gray-900 font-black py-5 rounded-2xl text-sm uppercase hover:bg-yellow-500 shadow-lg flex items-center justify-center transition-transform active:scale-95"
+                                >
+                                    <PlusIcon className="w-5 h-5 mr-2" /> Novo
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
-            )}
 
-            {/* Tabela de Viagens Longas */}
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-left">
-                    <thead className="hidden md:table-header-group bg-gray-50/80">
-                        <tr>
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Cidade/Destino</th>
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Distância</th>
-                            <th className="px-6 py-4 text-xs font-black text-gray-400 uppercase tracking-widest">Preço Estimado</th>
-                            {isAdmin && <th className="px-6 py-4"></th>}
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                        {longTrips.length > 0 ? longTrips.map((trip) => (
-                            <tr key={trip.id} className="block md:table-row hover:bg-yellow-50/30 transition-colors">
-                                <td className="p-4 md:px-6 md:py-4 block md:table-cell">
-                                    <div className="flex justify-between items-center md:block">
-                                        <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Destino</span>
-                                        <span className="text-sm font-black text-gray-800 uppercase tracking-tight">{trip.city}</span>
-                                    </div>
-                                </td>
-                                <td className="px-4 py-2 md:px-6 md:py-4 block md:table-cell">
-                                    <div className="flex justify-between items-center md:block">
-                                        <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Distância</span>
-                                        <span className="text-sm text-gray-600 font-bold">{trip.kilometers.toFixed(1).replace('.', ',')} KM</span>
-                                    </div>
-                                </td>
-                                <td className="p-4 md:px-6 md:py-4 block md:table-cell bg-yellow-50/20 md:bg-transparent rounded-b-xl md:rounded-none border-t md:border-t-0 mt-2 md:mt-0">
-                                    <div className="flex justify-between items-center md:block">
-                                        <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Preço</span>
-                                        <span className="text-base text-gray-900 font-black">R$ {(trip.kilometers * pricePerKm).toFixed(2).replace('.', ',')}</span>
-                                    </div>
-                                </td>
-                                {isAdmin && (
-                                    <td className="px-4 py-3 md:px-6 md:py-4 block md:table-cell text-right">
-                                        <div className="flex items-center justify-end space-x-3">
-                                            <button 
-                                                onClick={() => { setEditingTrip(trip); setIsModalOpen(true); }} 
-                                                className="p-2 text-blue-500 hover:bg-blue-100 rounded-xl transition-all"
-                                                title="Editar"
-                                            >
-                                                <PencilIcon className="w-5 h-5" />
-                                            </button>
-                                            <button 
-                                                onClick={() => { if (window.confirm('Excluir destino salvo?')) onDeleteLongTrip(trip.id); }} 
-                                                className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all"
-                                                title="Excluir"
-                                            >
-                                                <TrashIcon className="w-5 h-5" />
-                                            </button>
+                <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                    <table className="w-full text-left">
+                        <thead className="hidden md:table-header-group bg-gray-50/50">
+                            <tr>
+                                <th className="px-8 py-6 text-sm font-black text-gray-400 uppercase tracking-widest">Cidade de Destino</th>
+                                <th className="px-8 py-6 text-sm font-black text-gray-400 uppercase tracking-widest">Distância</th>
+                                <th className="px-8 py-6 text-sm font-black text-gray-400 uppercase tracking-widest">Valor Estimado</th>
+                                {isAdmin && <th className="px-8 py-6 text-right">Ações</th>}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-50">
+                            {longTrips.length > 0 ? longTrips.map((trip) => {
+                                // Alerta visual de divergência se o GPS estiver ativo e for para este destino
+                                const hasDivergence = calculatedDistance && 
+                                    (trip.city.toLowerCase().includes(destination.toLowerCase()) || destination.toLowerCase().includes(trip.city.toLowerCase())) &&
+                                    Math.abs(calculatedDistance - trip.kilometers) > 5;
+
+                                return (
+                                    <tr key={trip.id} className={`block md:table-row hover:bg-yellow-50/20 transition-colors ${hasDivergence ? 'bg-red-50/30' : ''}`}>
+                                        <td className="p-6 md:px-8 md:py-6 block md:table-cell">
+                                            <div className="flex justify-between items-center md:block">
+                                                <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Destino</span>
+                                                <div className="flex items-center">
+                                                    <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{trip.city}</span>
+                                                    {hasDivergence && (
+                                                        <span title="Divergência detectada com o GPS" className="ml-2 text-red-500 animate-pulse">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                                            </svg>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-2 md:px-8 md:py-6 block md:table-cell">
+                                            <div className="flex justify-between items-center md:block">
+                                                <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Distância</span>
+                                                <span className={`text-base font-bold ${hasDivergence ? 'text-red-600' : 'text-gray-600'}`}>
+                                                    {trip.kilometers.toFixed(1).replace('.', ',')} KM
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className="p-6 md:px-8 md:py-6 block md:table-cell bg-yellow-50/10 md:bg-transparent">
+                                            <div className="flex justify-between items-center md:block">
+                                                <span className="font-bold text-xs text-gray-400 md:hidden uppercase">Valor</span>
+                                                <span className="text-xl text-gray-900 font-black">R$ {(trip.kilometers * pricePerKm).toFixed(2).replace('.', ',')}</span>
+                                            </div>
+                                        </td>
+                                        {isAdmin && (
+                                            <td className="px-6 py-4 md:px-8 md:py-6 block md:table-cell text-right">
+                                                <div className="flex items-center justify-end space-x-4">
+                                                    {hasDivergence && (
+                                                        <button 
+                                                            onClick={handleSyncWithGPS}
+                                                            className="p-3 text-green-600 hover:bg-green-100 rounded-2xl transition-all"
+                                                            title="Sincronizar com GPS"
+                                                        >
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => { setEditingTrip(trip); setIsModalOpen(true); }} className="p-3 text-blue-500 hover:bg-blue-100 rounded-2xl transition-all"><PencilIcon className="w-6 h-6" /></button>
+                                                    <button onClick={() => { if (confirm('Excluir destino?')) onDeleteLongTrip(trip.id); }} className="p-3 text-red-500 hover:bg-red-100 rounded-2xl transition-all"><TrashIcon className="w-6 h-6" /></button>
+                                                </div>
+                                            </td>
+                                        )}
+                                    </tr>
+                                );
+                            }) : (
+                                <tr>
+                                    <td colSpan={isAdmin ? 4 : 3} className="p-24 text-center">
+                                        <div className="flex flex-col items-center">
+                                            <div className="bg-gray-50 p-6 rounded-full mb-4">
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 9.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                </svg>
+                                            </div>
+                                            <p className="text-gray-400 text-lg font-medium italic">Nenhum destino encontrado com esses filtros.</p>
+                                            <button onClick={clearFilters} className="mt-4 text-blue-500 font-black uppercase text-xs hover:underline">Ver todos os destinos</button>
                                         </div>
                                     </td>
-                                )}
-                            </tr>
-                        )) : (
-                            <tr><td colSpan={isAdmin ? 4 : 3} className="p-16 text-center text-gray-400 text-sm font-medium italic">Nenhum registro encontrado para a busca.</td></tr>
-                        )}
-                    </tbody>
-                </table>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     );
