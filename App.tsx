@@ -21,6 +21,12 @@ const App: React.FC = () => {
   
   const [pricePerKm, setPricePerKm] = useState<number>(() => fareService.getPricePerKm());
 
+  // Função utilitária para remover acentos e normalizar strings para busca
+  const normalizeString = (str: string) => {
+    if (!str) return "";
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  };
+
   useEffect(() => {
     const handleStorageChange = () => {
       setFares(fareService.getFares());
@@ -61,19 +67,23 @@ const App: React.FC = () => {
   }, [fares]);
 
   const filteredFares = React.useMemo(() => {
+    const normalizedSearch = normalizeString(searchTerm);
     return fares.filter(fare => {
-      const matchesSearch = fare.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          fare.region.toLowerCase().includes(searchTerm.toLowerCase());
+      const normalizedDest = normalizeString(fare.destination);
+      const normalizedRegion = normalizeString(fare.region);
+      
+      const matchesSearch = normalizedDest.includes(normalizedSearch) ||
+                          normalizedRegion.includes(normalizedSearch);
       const matchesRegion = regionFilter === '' || fare.region === regionFilter;
       return matchesSearch && matchesRegion;
     });
   }, [fares, searchTerm, regionFilter]);
 
   const filteredLongTrips = React.useMemo(() => {
+    const normalizedSearch = normalizeString(longTripSearchTerm);
     return longTrips.filter(trip => {
-        const cityLower = trip.city.toLowerCase();
-        const searchLower = longTripSearchTerm.toLowerCase().trim();
-        const matchesCity = cityLower.includes(searchLower);
+        const normalizedCity = normalizeString(trip.city);
+        const matchesCity = normalizedCity.includes(normalizedSearch);
         
         const kmInput = longTripKmSearchTerm.trim().replace(',', '.');
         const searchNum = parseFloat(kmInput);
@@ -81,18 +91,13 @@ const App: React.FC = () => {
 
         let matchesKm = true;
         if (kmInput !== '') {
-            // Busca textual no KM
             const stringIncludes = trip.kilometers.toString().includes(kmInput);
-            // Tolerância inteligente de 5% ou 5km (o que for maior) para lidar com variações de rota do Maps
             const tolerance = Math.max(5, trip.kilometers * 0.05);
             const proximityMatch = isSearchNumValid && Math.abs(trip.kilometers - searchNum) <= tolerance;
-            
             matchesKm = stringIncludes || proximityMatch;
         }
 
-        // Se houver busca por nome, não filtramos por KM a menos que o KM seja o único filtro
-        // Isso resolve o problema da tabela sumir quando o GPS dá um valor diferente do salvo
-        if (searchLower !== '' && longTripKmSearchTerm === '') {
+        if (normalizedSearch !== '' && longTripKmSearchTerm === '') {
             return matchesCity;
         }
         
