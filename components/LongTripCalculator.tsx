@@ -212,6 +212,14 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
 
+    // Estado local para o input de preço para evitar triggers excessivos
+    const [localPriceInput, setLocalPriceInput] = useState(pricePerKm.toString());
+    const [saveSuccess, setSaveSuccess] = useState(false);
+
+    useEffect(() => {
+        setLocalPriceInput(pricePerKm.toString());
+    }, [pricePerKm]);
+
     const isFiltered = searchTerm !== '' || kmSearchTerm !== '';
 
     const matchedSavedTrip = allLongTrips.find(t => 
@@ -271,6 +279,15 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
         }
     };
 
+    const handlePriceSave = () => {
+        const val = parseFloat(localPriceInput);
+        if (!isNaN(val)) {
+            setPricePerKm(val);
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+        }
+    };
+
     const handleSave = (trip: LongTrip) => {
         if (editingTrip) onUpdateLongTrip(trip);
         else onAddLongTrip(trip);
@@ -293,7 +310,6 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             const lines = text.split('\n');
             const newTrips: LongTrip[] = [];
             
-            // Skip header
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i].trim();
                 if (!line) continue;
@@ -362,17 +378,25 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
 
                     <div className="bg-gray-50 p-6 rounded-3xl border border-gray-200">
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Valor cobrado por KM (R$)</label>
-                      <div className="flex items-center space-x-3">
-                        <input 
-                          type="number" 
-                          value={pricePerKm} 
-                          onChange={(e) => setPricePerKm(parseFloat(e.target.value) || 0)}
-                          step="0.10"
-                          className="w-full p-4 text-2xl font-black text-gray-800 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 outline-none shadow-inner"
-                        />
-                        <span className="text-sm font-black text-gray-400">/ KM</span>
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-3">
+                            <input 
+                            type="number" 
+                            value={localPriceInput} 
+                            onChange={(e) => setLocalPriceInput(e.target.value)}
+                            step="0.10"
+                            className="w-full p-4 text-2xl font-black text-gray-800 bg-white border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 outline-none shadow-inner"
+                            />
+                            <span className="text-sm font-black text-gray-400 whitespace-nowrap">/ KM</span>
+                        </div>
+                        <button 
+                            onClick={handlePriceSave}
+                            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${saveSuccess ? 'bg-green-500 text-white' : 'bg-gray-800 text-white hover:bg-black'}`}
+                        >
+                            {saveSuccess ? '✓ PREÇO SALVO' : 'SALVAR PREÇO'}
+                        </button>
                       </div>
-                      <p className="mt-3 text-[9px] text-gray-400 font-bold uppercase">Este valor altera o total de todas as viagens na tabela abaixo automaticamente.</p>
+                      <p className="mt-3 text-[9px] text-gray-400 font-bold uppercase leading-relaxed italic">Este valor altera o total de todas as viagens na tabela para todos os usuários.</p>
                     </div>
                   </div>
                   
@@ -385,7 +409,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                           {isLoadingDistance ? (
                               <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
                           ) : <MapPinIcon className="w-6 h-6" />}
-                          <span>{isLoadingDistance ? 'Calculando Rota...' : 'Calcular Rota via Google Maps'}</span>
+                          <span>{isLoadingDistance ? 'Calculando Rota...' : 'Consultar Distância Oficial'}</span>
                       </button>
                       
                       {distanceError && (
@@ -398,7 +422,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                           <div className="mt-10 w-full max-w-4xl space-y-6">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
                                   <div className="bg-blue-50 p-8 rounded-[40px] border-2 border-blue-100 shadow-inner flex flex-col items-center">
-                                      <span className="text-blue-500 text-xs font-black uppercase tracking-widest mb-1 block">Google Maps (Tempo Real)</span>
+                                      <span className="text-blue-500 text-xs font-black uppercase tracking-widest mb-1 block">Google Maps (Distância Real)</span>
                                       <span className="text-5xl font-black text-gray-800">{calculatedDistance.toFixed(1).replace('.', ',')} KM</span>
                                   </div>
 
@@ -407,26 +431,26 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                       {matchedSavedTrip ? (
                                           <div className="text-center">
                                               <span className="text-3xl font-black text-gray-800">{matchedSavedTrip.kilometers.toFixed(1).replace('.', ',')} KM</span>
-                                              {Math.abs(calculatedDistance - matchedSavedTrip.kilometers) > 10 && (
-                                                <div className="mt-3 bg-red-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase animate-bounce">
-                                                  ALTA DIVERGÊNCIA
+                                              {Math.abs(calculatedDistance - matchedSavedTrip.kilometers) > 5 && (
+                                                <div className="mt-3 bg-red-500 text-white px-4 py-1.5 rounded-full text-[10px] font-black uppercase">
+                                                  DIVERGÊNCIA DETECTADA
                                                 </div>
                                               )}
                                               <button 
                                                   onClick={handleSyncWithGPS}
                                                   className="mt-4 px-6 py-2.5 bg-yellow-400 text-gray-900 rounded-xl text-[10px] font-black uppercase hover:bg-yellow-500 shadow-sm"
                                               >
-                                                  Sincronizar com Tabela
+                                                  Atualizar Tabela
                                               </button>
                                           </div>
                                       ) : (
-                                          <p className="text-sm text-gray-400 font-bold uppercase italic mt-2">Destino não cadastrado na tabela</p>
+                                          <p className="text-sm text-gray-400 font-bold uppercase italic mt-2">Local não cadastrado</p>
                                       )}
                                   </div>
                               </div>
 
                               <div className="bg-green-600 rounded-[50px] p-12 shadow-2xl border-8 border-white ring-12 ring-green-50 animate-in zoom-in duration-500 text-center">
-                                  <span className="text-white/80 text-sm font-black uppercase tracking-widest mb-2 block">VALOR ESTIMADO DA CORRIDA</span>
+                                  <span className="text-white/80 text-sm font-black uppercase tracking-widest mb-2 block">VALOR SUGERIDO (KM × PREÇO ATUAL)</span>
                                   <p className="text-7xl font-black text-white drop-shadow-lg">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
                               </div>
                           </div>
@@ -443,16 +467,16 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                             <div className="w-2 h-8 bg-yellow-400 rounded-full mr-4 shadow-sm"></div>
                             <div>
                                 <h2 className="text-xl font-black text-gray-800 uppercase tracking-widest">Tabela de Viagens Longas</h2>
-                                <p className="text-[11px] text-gray-400 font-bold uppercase mt-0.5">Destinos fixos e valores pré-definidos (R$ {pricePerKm.toFixed(2)}/KM)</p>
+                                <p className="text-[11px] text-gray-400 font-bold uppercase mt-0.5">Base de cálculo: <span className="text-gray-900 font-black">R$ {pricePerKm.toFixed(2).replace('.', ',')}/KM</span></p>
                             </div>
                         </div>
                         <div className="flex items-center space-x-3">
                             <span className="bg-yellow-100 text-yellow-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-tighter">
-                                {longTrips.length} {longTrips.length === 1 ? 'Cidade' : 'Cidades'}
+                                {longTrips.length} Destinos
                             </span>
                             {isFiltered && (
                                 <button onClick={clearFilters} className="text-[11px] font-black text-red-500 uppercase hover:underline flex items-center">
-                                    <XIcon className="w-3.5 h-3.5 mr-1" /> Limpar
+                                    <XIcon className="w-3.5 h-3.5 mr-1" /> Limpar Filtros
                                 </button>
                             )}
                         </div>
@@ -467,10 +491,10 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                             </span>
                             <input
                                 type="text"
-                                placeholder="Pesquisar cidade..."
+                                placeholder="Buscar cidade (ignore acentos)..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pr-12 pl-14 py-5 text-lg border border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-medium shadow-inner placeholder:text-gray-300"
+                                className="w-full pr-12 pl-14 py-5 text-lg border border-gray-200 rounded-2xl focus:ring-2 focus:ring-yellow-400 outline-none bg-gray-50 font-medium shadow-inner"
                             />
                         </div>
                         <div className="xl:col-span-2 relative">
@@ -489,7 +513,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                 <button onClick={() => fileInputRef.current?.click()} className="p-4 text-blue-500 hover:bg-blue-50 rounded-2xl transition-colors border border-gray-100" title="Importar CSV"><UploadIcon className="w-6 h-6" /></button>
                                 <button onClick={handleExportCSV} className="p-4 text-gray-500 hover:bg-gray-50 rounded-2xl transition-colors border border-gray-100" title="Exportar CSV"><DownloadIcon className="w-6 h-6" /></button>
                                 <button onClick={() => { setEditingTrip(null); setIsModalOpen(true); }} className="flex-1 bg-yellow-400 text-gray-900 font-black py-5 rounded-2xl text-sm uppercase hover:bg-yellow-500 shadow-lg flex items-center justify-center transition-transform active:scale-95">
-                                    <PlusIcon className="w-5 h-5 mr-2" /> Novo Destino
+                                    <PlusIcon className="w-5 h-5 mr-2" /> Novo Registro
                                 </button>
                               </>
                             )}
@@ -501,10 +525,10 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                     <table className="w-full text-left">
                         <thead className="hidden md:table-header-group bg-gray-800">
                             <tr>
-                                <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Cidade de Destino</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Quilometragem</th>
-                                <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor da Viagem</th>
-                                {isAdmin && <th className="px-8 py-6 text-right text-gray-400 uppercase text-[10px] font-black tracking-widest">Gerenciar</th>}
+                                <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Destino</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Distância</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Valor</th>
+                                {isAdmin && <th className="px-8 py-6 text-right"></th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -515,7 +539,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                 return (
                                     <tr 
                                         key={trip.id} 
-                                        className={`block md:table-row transition-all duration-200 hover:bg-yellow-50/30 ${isMatchedGPS ? 'bg-blue-50/50 ring-2 ring-blue-200' : (index % 2 === 0 ? 'bg-white' : 'bg-gray-50/80')}`}
+                                        className={`block md:table-row transition-all duration-200 hover:bg-yellow-50/30 ${isMatchedGPS ? 'bg-blue-50 ring-2 ring-blue-200' : (index % 2 === 0 ? 'bg-white' : 'bg-gray-50/80')}`}
                                     >
                                         <td className="p-6 md:px-8 md:py-6 block md:table-cell">
                                             <div className="flex justify-between items-center md:block">
@@ -548,7 +572,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                             }) : (
                                 <tr>
                                     <td colSpan={isAdmin ? 4 : 3} className="p-32 text-center">
-                                        <p className="text-gray-400 text-lg font-black uppercase tracking-widest opacity-30 italic">Sem resultados para os filtros</p>
+                                        <p className="text-gray-400 text-lg font-black uppercase tracking-widest opacity-30 italic">Nenhum resultado encontrado</p>
                                     </td>
                                 </tr>
                             )}
