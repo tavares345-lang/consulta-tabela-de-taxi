@@ -28,29 +28,18 @@ const App: React.FC = () => {
   };
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      setFares(fareService.getFares());
-      setLongTrips(fareService.getLongTrips());
-      setPricePerKm(fareService.getPricePerKm());
+    const handleStorageChange = (e: StorageEvent) => {
+      // Sincroniza abas diferentes apenas se as chaves específicas mudarem
+      if (e.key === 'taxi_app_fares' || e.key === 'taxi_app_long_trips' || e.key === 'taxi_app_price_per_km') {
+        setFares(fareService.getFares());
+        setLongTrips(fareService.getLongTrips());
+        setPricePerKm(fareService.getPricePerKm());
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
-
-  useEffect(() => {
-    fareService.storeFares(fares);
-  }, [fares]);
-
-  useEffect(() => {
-    fareService.storeLongTrips(longTrips);
-  }, [longTrips]);
-
-  useEffect(() => {
-    if (!isNaN(pricePerKm)) {
-        fareService.storePricePerKm(pricePerKm);
-    }
-  }, [pricePerKm]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -105,32 +94,56 @@ const App: React.FC = () => {
     });
   }, [longTrips, longTripSearchTerm, longTripKmSearchTerm]);
 
+  // Handlers com persistência imediata e limpeza de filtros
   const handleAddFare = (newFare: Fare) => {
-    setFares(prevFares => [...prevFares, newFare]);
+    const updated = [...fares, newFare];
+    setFares(updated);
+    fareService.storeFares(updated);
+    setSearchTerm(''); // Limpa busca para mostrar o novo item
+    setRegionFilter('');
   };
 
   const handleUpdateFare = (updatedFare: Fare) => {
-    setFares(prevFares => prevFares.map(f => (f.id === updatedFare.id ? updatedFare : f)));
+    const updated = fares.map(f => (f.id === updatedFare.id ? updatedFare : f));
+    setFares(updated);
+    fareService.storeFares(updated);
   };
 
   const handleDeleteFare = (fareId: string) => {
-    setFares(prevFares => prevFares.filter(f => f.id !== fareId));
+    const updated = fares.filter(f => f.id !== fareId);
+    setFares(updated);
+    fareService.storeFares(updated);
   };
   
   const handleImportFares = (newFares: Fare[]) => {
-    setFares(prevFares => [...prevFares, ...newFares]);
+    const updated = [...fares, ...newFares];
+    setFares(updated);
+    fareService.storeFares(updated);
   };
 
   const handleAddLongTrip = (newTrip: LongTrip) => {
-    setLongTrips(prev => [...prev, newTrip]);
+    const updated = [...longTrips, newTrip];
+    setLongTrips(updated);
+    fareService.storeLongTrips(updated);
+    setLongTripSearchTerm(''); // Limpa busca para mostrar o novo item
+    setLongTripKmSearchTerm('');
   };
 
   const handleUpdateLongTrip = (updatedTrip: LongTrip) => {
-    setLongTrips(prev => prev.map(t => (t.id === updatedTrip.id ? updatedTrip : t)));
+    const updated = longTrips.map(t => (t.id === updatedTrip.id ? updatedTrip : t));
+    setLongTrips(updated);
+    fareService.storeLongTrips(updated);
   };
 
   const handleDeleteLongTrip = (tripId: string) => {
-    setLongTrips(prev => prev.filter(t => t.id !== tripId));
+    const updated = longTrips.filter(t => t.id !== tripId);
+    setLongTrips(updated);
+    fareService.storeLongTrips(updated);
+  };
+
+  const handleSetPricePerKm = (price: number) => {
+    setPricePerKm(price);
+    fareService.storePricePerKm(price);
   };
 
   if (!currentUser) {
@@ -162,7 +175,7 @@ const App: React.FC = () => {
           <LongTripCalculator 
             isAdmin={isAdmin}
             pricePerKm={pricePerKm}
-            setPricePerKm={setPricePerKm}
+            setPricePerKm={handleSetPricePerKm}
             longTrips={filteredLongTrips}
             searchTerm={longTripSearchTerm}
             setSearchTerm={setLongTripSearchTerm}

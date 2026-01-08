@@ -212,7 +212,6 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     const [isLoadingDistance, setIsLoadingDistance] = useState(false);
     const [distanceError, setDistanceError] = useState<string | null>(null);
 
-    // Estado local para o input de preço para evitar triggers excessivos
     const [localPriceInput, setLocalPriceInput] = useState(pricePerKm.toString());
     const [saveSuccess, setSaveSuccess] = useState(false);
 
@@ -256,8 +255,7 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             const result: DistanceResult = await getDistance(origin, destination);
             if (result.distance !== null && result.distance > 0) {
                 setCalculatedDistance(result.distance);
-                if (!searchTerm) setSearchTerm(destination);
-                setKmSearchTerm(Math.floor(result.distance).toString());
+                // Não limpamos os filtros aqui, mas sugerimos
             } else {
                 setDistanceError("Rota não localizada. Tente endereços mais simples.");
             }
@@ -276,6 +274,18 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                     kilometers: parseFloat(calculatedDistance.toFixed(1))
                 });
             }
+        }
+    };
+
+    const handleAddToTable = () => {
+        if (isAdmin && !matchedSavedTrip && calculatedDistance) {
+            const newTrip: LongTrip = {
+                id: `lt-${Date.now()}`,
+                city: destination.trim(),
+                kilometers: parseFloat(calculatedDistance.toFixed(1))
+            };
+            onAddLongTrip(newTrip);
+            alert(`"${newTrip.city}" adicionado à tabela fixa.`);
         }
     };
 
@@ -444,7 +454,15 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                               </button>
                                           </div>
                                       ) : (
-                                          <p className="text-sm text-gray-400 font-bold uppercase italic mt-2">Local não cadastrado</p>
+                                          <div className="text-center">
+                                              <p className="text-sm text-gray-400 font-bold uppercase italic mt-2">Local não cadastrado</p>
+                                              <button 
+                                                  onClick={handleAddToTable}
+                                                  className="mt-4 px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase hover:bg-blue-700 shadow-sm"
+                                              >
+                                                  Adicionar à Tabela
+                                              </button>
+                                          </div>
                                       )}
                                   </div>
                               </div>
