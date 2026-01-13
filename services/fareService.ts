@@ -5,6 +5,25 @@ const FARES_KEY = 'taxi_app_fares';
 const LONG_TRIPS_KEY = 'taxi_app_long_trips';
 const PRICE_PER_KM_KEY = 'taxi_app_price_per_km';
 
+// Funções internas para manipulação segura de dados
+const getFromStorage = <T>(key: string, initial: T): T => {
+    try {
+        const stored = localStorage.getItem(key);
+        if (stored === null) return initial;
+        return JSON.parse(stored);
+    } catch (e) {
+        return initial;
+    }
+};
+
+const saveToStorage = (key: string, data: any) => {
+    try {
+        localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+        console.error("Falha ao salvar no storage:", e);
+    }
+};
+
 const initialFares: Fare[] = [
   { id: '1', destination: 'AARAO REIS', region: 'NORTE', meterValue: 182.00, counterValue: 149.00 },
   { id: '2', destination: 'Actuall Convention Hotel', region: 'Contagem', meterValue: 277.00, counterValue: 224.00 },
@@ -443,7 +462,6 @@ const initialFares: Fare[] = [
   { id: '435', destination: 'Piemonte Hotel', region: 'Nova Lima', meterValue: 283.00, counterValue: 233.00 },
   { id: '436', destination: 'PINDORAMA', region: 'NOROESTE', meterValue: 237.00, counterValue: 193.00 },
   { id: '437', destination: 'PINTO COELHO', region: 'LAGOA SANTA', meterValue: 117.00, counterValue: 95.00 },
-  // Fix: changed 'block' to 'destination' to match Fare interface
   { id: '438', destination: 'PIRAJA', region: 'NORDESTE', meterValue: 189.00, counterValue: 153.00 },
   { id: '439', destination: 'PIRATININGA', region: 'VENDA NOVA', meterValue: 165.00, counterValue: 136.00 },
   { id: '440', destination: 'PLANALTO', region: 'NORTE', meterValue: 166.00, counterValue: 138.00 },
@@ -873,7 +891,6 @@ const initialLongTrips: LongTrip[] = [
   { id: 'lt-247', city: 'Dom Joaquim', kilometers: 227 },
   { id: 'lt-248', city: 'Dom Silvério', kilometers: 172 },
   { id: 'lt-249', city: 'Dom Viçoso', kilometers: 400 },
-  { id: 'lt-250', city: 'Dona Euzébia', kilometers: 287 },
   { id: 'lt-251', city: 'Dores de Campos', kilometers: 206 },
   { id: 'lt-252', city: 'Dores de Guanhães', kilometers: 224 },
   { id: 'lt-253', city: 'Dores do Indaiá', kilometers: 240 },
@@ -1215,36 +1232,19 @@ const initialLongTrips: LongTrip[] = [
 ];
 
 export const getFares = (): Fare[] => {
-  try {
-    const stored = localStorage.getItem(FARES_KEY);
-    if (stored === null) return initialFares;
-    return JSON.parse(stored);
-  } catch (error) {
-    return initialFares;
-  }
+  return getFromStorage(FARES_KEY, initialFares);
 };
 
 export const storeFares = (fares: Fare[]) => {
-  try {
-    localStorage.setItem(FARES_KEY, JSON.stringify(fares));
-  } catch (error) {}
+  saveToStorage(FARES_KEY, fares);
 };
 
 export const getLongTrips = (): LongTrip[] => {
-  try {
-    const stored = localStorage.getItem(LONG_TRIPS_KEY);
-    if (stored === null) return initialLongTrips;
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? parsed : initialLongTrips;
-  } catch (error) {
-    return initialLongTrips;
-  }
+  return getFromStorage(LONG_TRIPS_KEY, initialLongTrips);
 };
 
 export const storeLongTrips = (trips: LongTrip[]) => {
-  try {
-    localStorage.setItem(LONG_TRIPS_KEY, JSON.stringify(trips));
-  } catch (error) {}
+  saveToStorage(LONG_TRIPS_KEY, trips);
 };
 
 export const getPricePerKm = (): number => {
@@ -1259,7 +1259,5 @@ export const getPricePerKm = (): number => {
 };
 
 export const storePricePerKm = (price: number) => {
-  try {
     localStorage.setItem(PRICE_PER_KM_KEY, price.toString());
-  } catch (error) {}
 };
