@@ -18,8 +18,3 @@ export interface LongTrip {
   city: string;
   kilometers: number;
 }
-
-export interface DistanceResult {
-  distance: number | null;
-  sources: { title: string; uri: string }[];
-}

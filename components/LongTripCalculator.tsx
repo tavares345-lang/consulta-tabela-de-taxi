@@ -1,113 +1,10 @@
 
-import React, { useState, useEffect, useRef } from 'react';
-import type { LongTrip, DistanceResult } from '../types';
+import React, { useState, useEffect } from 'react';
+import type { LongTrip } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { TrashIcon } from './icons/TrashIcon';
-import { MapPinIcon } from './icons/MapPinIcon';
-import { CarIcon } from './icons/CarIcon';
 import { XIcon } from './icons/XIcon';
-import { UploadIcon } from './icons/UploadIcon';
-import { DownloadIcon } from './icons/DownloadIcon';
-import { getDistance } from '../services/geminiService';
-
-const POPULAR_LOCATIONS = [
-  "Aeroporto Internacional de Confins - Tancredo Neves",
-  "Rodoviária de Belo Horizonte",
-  "Shopping Cidade, Belo Horizonte",
-  "BH Shopping, Belvedere",
-  "Expominas, Gameleira",
-  "Mineirão",
-  "Praça da Liberdade",
-  "Inhotim, Brumadinho",
-  "Savassi, Belo Horizonte",
-  "Centro, Belo Horizonte",
-  "Lagoa Santa",
-  "Vespasiano",
-  "Santa Luzia",
-  "Betim Centro"
-];
-
-interface LocationAutocompleteInputProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}
-
-const LocationAutocompleteInput: React.FC<LocationAutocompleteInputProps> = ({ label, value, onChange, placeholder }) => {
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (value.trim() === '') {
-      setSuggestions(POPULAR_LOCATIONS.slice(0, 4));
-    } else {
-      const filtered = POPULAR_LOCATIONS.filter(loc => 
-        loc.toLowerCase().includes(value.toLowerCase()) && 
-        loc.toLowerCase() !== value.toLowerCase()
-      );
-      setSuggestions(filtered.slice(0, 5));
-    }
-  }, [value]);
-
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent | TouchEvent) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, []);
-
-  const handleSelect = (suggestion: string) => {
-    onChange(suggestion);
-    setShowSuggestions(false);
-  };
-
-  return (
-    <div className="relative" ref={wrapperRef}>
-        <label className="block text-sm font-black text-gray-500 uppercase tracking-tighter mb-2">{label}</label>
-        <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400">
-                <MapPinIcon className="w-5 h-5" />
-            </span>
-            <input 
-                type="text" 
-                value={value}
-                onChange={(e) => {
-                    onChange(e.target.value);
-                    setShowSuggestions(true);
-                }}
-                onFocus={() => setShowSuggestions(true)}
-                placeholder={placeholder}
-                className="w-full pl-12 pr-12 py-4 text-base border border-gray-200 rounded-2xl focus:ring-2 focus:ring-blue-400 outline-none bg-white shadow-sm font-medium"
-                autoComplete="off"
-            />
-            {value && (
-              <button onClick={() => onChange('')} className="absolute right-4 top-1/2 -translate-y-1/2 p-2 text-gray-300 hover:text-gray-500">
-                  <XIcon className="w-5 h-5" />
-              </button>
-            )}
-        </div>
-        {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-30 w-full bg-white mt-2 rounded-2xl shadow-2xl max-h-72 overflow-y-auto border border-gray-100 animate-in fade-in zoom-in duration-150">
-                <ul>
-                    {suggestions.map((suggestion, index) => (
-                        <li key={index} onMouseDown={(e) => { e.preventDefault(); handleSelect(suggestion); }} className="px-5 py-4 hover:bg-blue-50 cursor-pointer text-base text-gray-700 border-b last:border-b-0 border-gray-50 font-bold">{suggestion}</li>
-                    ))}
-                </ul>
-            </div>
-        )}
-    </div>
-  );
-};
 
 interface LongTripModalProps {
   trip: LongTrip | null;
@@ -175,11 +72,6 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTrip, setEditingTrip] = useState<LongTrip | null>(null);
-    const [origin, setOrigin] = useState('Aeroporto Internacional de Confins - Tancredo Neves');
-    const [destination, setDestination] = useState('');
-    const [calculatedDistance, setCalculatedDistance] = useState<number | null>(null);
-    const [isLoadingDistance, setIsLoadingDistance] = useState(false);
-    const [distanceError, setDistanceError] = useState<string | null>(null);
 
     const [localPriceInput, setLocalPriceInput] = useState(pricePerKm.toString().replace('.', ','));
     const [saveSuccess, setSaveSuccess] = useState(false);
@@ -187,27 +79,6 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
     useEffect(() => {
         setLocalPriceInput(pricePerKm.toString().replace('.', ','));
     }, [pricePerKm]);
-
-    const handleCalculateRoute = async () => {
-        if (!origin.trim() || !destination.trim()) return;
-
-        setIsLoadingDistance(true);
-        setDistanceError(null);
-        setCalculatedDistance(null);
-
-        try {
-            const result: DistanceResult = await getDistance(origin, destination);
-            if (result.distance !== null && result.distance > 0) {
-                setCalculatedDistance(result.distance);
-            } else {
-                setDistanceError("Não foi possível localizar uma rota precisa.");
-            }
-        } catch (error) {
-            setDistanceError("Erro ao acessar serviço de mapas.");
-        } finally {
-            setIsLoadingDistance(false);
-        }
-    };
 
     const handlePriceSave = () => {
         const val = parseFloat(localPriceInput.trim().replace(',', '.'));
@@ -238,23 +109,13 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
            
             {isAdmin && (
               <div className="bg-white rounded-3xl shadow-xl p-8 border border-gray-100 border-l-[12px] border-l-blue-600 animate-in slide-in-from-top-6 duration-500">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 items-start">
-                    <div className="lg:col-span-2">
-                      <div className="flex items-center mb-6">
-                        <div className="p-3 bg-blue-100 rounded-2xl mr-4">
-                            <CarIcon className="w-8 h-8 text-blue-600" />
-                        </div>
-                        <h2 className="text-xl font-black text-gray-800 uppercase tracking-widest">Consulta de Rota (Google Maps)</h2>
-                        <span className="ml-4 bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-black uppercase">Exclusivo Admin</span>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <LocationAutocompleteInput label="Partida" value={origin} onChange={setOrigin} placeholder="Origem..." />
-                          <LocationAutocompleteInput label="Destino" value={destination} onChange={setDestination} placeholder="Cidade ou Local..." />
-                      </div>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div>
+                        <h2 className="text-xl font-black text-gray-800 uppercase tracking-widest mb-2">Configurações da Tabela</h2>
+                        <p className="text-sm font-bold text-gray-400 uppercase">Ajuste o valor por KM para toda a tabela de viagens.</p>
                     </div>
 
-                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-200">
+                    <div className="bg-gray-50 p-6 rounded-3xl border border-gray-200 min-w-[300px]">
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Preço por KM (R$)</label>
                       <div className="space-y-3">
                         <div className="flex items-center space-x-3">
@@ -266,25 +127,6 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                         </button>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col items-center">
-                      <button onClick={handleCalculateRoute} disabled={isLoadingDistance} className={`w-full md:w-auto px-16 py-5 rounded-2xl text-base font-black text-white uppercase shadow-2xl active:scale-95 transition-all flex items-center justify-center space-x-3 ${isLoadingDistance ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
-                          {isLoadingDistance ? <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin" /> : <MapPinIcon className="w-6 h-6" />}
-                          <span>{isLoadingDistance ? 'Localizando...' : 'Consultar Distância Oficial'}</span>
-                      </button>
-                      
-                      {distanceError && <div className="mt-6 p-4 bg-red-50 border-2 border-red-100 rounded-2xl text-red-600 text-sm font-black uppercase tracking-widest">{distanceError}</div>}
-                      
-                      {calculatedDistance !== null && (
-                          <div className="mt-10 w-full max-w-4xl animate-in zoom-in">
-                              <div className="bg-gray-900 rounded-[50px] p-12 shadow-2xl border-8 border-white ring-12 ring-gray-100 text-center">
-                                  <span className="text-blue-400 text-xs font-black uppercase tracking-widest mb-1 block">Distância: {calculatedDistance.toFixed(1).replace('.', ',')} KM</span>
-                                  <span className="text-yellow-400 text-sm font-black uppercase tracking-widest mb-2 block">VALOR ESTIMADO DA CORRIDA</span>
-                                  <p className="text-7xl font-black text-white">R$ {(calculatedDistance * pricePerKm).toFixed(2).replace('.', ',')}</p>
-                              </div>
-                          </div>
-                      )}
                   </div>
               </div>
             )}
