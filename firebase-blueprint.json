@@ -1,0 +1,36 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User account authorized to access the system",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "Email or username used to access the system"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["user", "admin"],
+          "description": "User access level role"
+        },
+        "passwordHash": {
+          "type": "string",
+          "description": "User password key"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO timestamp when the user was registered"
+        }
+      },
+      "required": ["email", "role", "passwordHash", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of users registered in the system"
+    }
+  }
+}

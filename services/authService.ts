@@ -1,76 +1,166 @@
-
+import { doc, getDoc, setDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
+import { db, auth } from './firebase';
 import type { User } from '../types';
 
-// NOTE: This is a simulation. In a real app, never store passwords in plain text or handle auth client-side.
-const USERS_KEY = 'taxi_app_users';
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth?.currentUser?.uid,
+      email: auth?.currentUser?.email,
+      emailVerified: auth?.currentUser?.emailVerified,
+      isAnonymous: auth?.currentUser?.isAnonymous,
+      tenantId: auth?.currentUser?.tenantId,
+      providerInfo: auth?.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 const CURRENT_USER_KEY = 'taxi_app_current_user';
 
-const getStoredUsers = (): Record<string, Omit<User, 'email'> & { passwordHash: string }> => {
+export const register = async (
+  email: string, 
+  password: string, 
+  role: 'user' | 'admin' = 'user'
+): Promise<{ success: boolean; message: string; user?: User }> => {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (normalizedEmail === 'admin') {
+    return { success: false, message: 'Este nome de usuário é reservado.' };
+  }
+
   try {
-    const users = localStorage.getItem(USERS_KEY);
-    return users ? JSON.parse(users) : {};
+    const userDocRef = doc(db, 'users', normalizedEmail);
+    let userDoc;
+    try {
+      userDoc = await getDoc(userDocRef);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, 'users/' + normalizedEmail);
+      return { success: false, message: 'Erro ao verificar usuário existente.' };
+    }
+    
+    if (userDoc.exists()) {
+      return { success: false, message: 'Este e-mail ou usuário já está cadastrado.' };
+    }
+
+    const newUser: User = {
+      email,
+      role,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      await setDoc(userDocRef, {
+        email,
+        role,
+        passwordHash: password,
+        createdAt: newUser.createdAt
+      });
+    } catch (err) {
+      handleFirestoreError(err, OperationType.WRITE, 'users/' + normalizedEmail);
+      return { success: false, message: 'Erro ao gravar usuário.' };
+    }
+
+    return { success: true, message: 'Cadastro realizado com sucesso!', user: newUser };
   } catch (error) {
-    return {};
+    return { success: false, message: 'Erro ao realizar cadastro.' };
   }
 };
 
-const storeUsers = (users: Record<string, Omit<User, 'email'> & { passwordHash: string }>) => {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-};
+export const login = async (
+  email: string, 
+  password: string
+): Promise<{ success: boolean; message: string; user?: User }> => {
+  const normalizedEmail = email.trim().toLowerCase();
 
-export const register = (email: string, password: string): { success: boolean; message: string; user?: User } => {
-  const users = getStoredUsers();
-
-  if (email.toLowerCase() === 'admin') {
-      return { success: false, message: 'Este nome de usuário é reservado.' };
-  }
-  
-  if (users[email]) {
-    return { success: false, message: 'Este e-mail já está cadastrado.' };
-  }
-
-  const newUser: User = {
-    email,
-    role: 'user',
-    createdAt: new Date().toISOString(),
-  };
-
-  users[email] = {
-    ...newUser,
-    passwordHash: password, // In a real app, hash the password
-  };
-
-  storeUsers(users);
-  return { success: true, message: 'Cadastro realizado com sucesso!', user: newUser };
-};
-
-export const login = (email: string, password: string): { success: boolean; message: string; user?: User } => {
-  // Hardcoded admin login
-  if (email.toLowerCase() === 'admin' && password === 'Admin') {
+  // Hardcoded recovery or initial admin setup fallback
+  if (normalizedEmail === 'admin' && password === 'Admin') {
     const adminUser: User = {
       email: 'Admin',
       role: 'admin',
       createdAt: new Date().toISOString(),
     };
+    
+    // Automatically provision or sync admin in Firestore
+    try {
+      const adminDocRef = doc(db, 'users', 'admin');
+      const adminDoc = await getDoc(adminDocRef);
+      if (!adminDoc.exists()) {
+        await setDoc(adminDocRef, {
+          email: 'admin',
+          role: 'admin',
+          passwordHash: 'Admin',
+          createdAt: adminUser.createdAt
+        });
+      }
+    } catch (e) {
+      console.warn("Could not auto-provision admin: ", e);
+    }
+
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(adminUser));
     return { success: true, message: 'Login de administrador bem-sucedido!', user: adminUser };
   }
 
-  const users = getStoredUsers();
-  const storedUser = users[email];
+  try {
+    const userDocRef = doc(db, 'users', normalizedEmail);
+    let userDoc;
+    try {
+      userDoc = await getDoc(userDocRef);
+    } catch (err) {
+      handleFirestoreError(err, OperationType.GET, 'users/' + normalizedEmail);
+      return { success: false, message: 'Erro ao consultar usuário no banco de dados.' };
+    }
 
-  if (storedUser && storedUser.passwordHash === password) { // In real app, compare hashes
-    const user: User = {
-        // Fix: The 'storedUser' object does not have an 'email' property. The email is the key, which is available in the 'email' function parameter.
-        email: email,
-        role: storedUser.role,
-        createdAt: storedUser.createdAt
-    };
-    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
-    return { success: true, message: 'Login bem-sucedido!', user };
+    if (userDoc.exists()) {
+      const stored = userDoc.data();
+      if (stored.passwordHash === password) {
+        const user: User = {
+          email: stored.email || userDoc.id,
+          role: stored.role || 'user',
+          createdAt: stored.createdAt || new Date().toISOString()
+        };
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+        return { success: true, message: 'Login bem-sucedido!', user };
+      }
+    }
+
+    return { success: false, message: 'E-mail ou senha inválidos.' };
+  } catch (err) {
+    return { success: false, message: 'Erro de conexão ao realizar login.' };
   }
-
-  return { success: false, message: 'E-mail ou senha inválidos.' };
 };
 
 export const logout = () => {
@@ -86,22 +176,34 @@ export const getCurrentUser = (): User | null => {
   }
 };
 
-export const getAllUsers = (): User[] => {
-    const users = getStoredUsers();
-    // Fix: The user object from Object.values() does not have an 'email' property. Use Object.entries() to get both the email (key) and the user data.
-    return Object.entries(users).map(([email, u]) => ({
-        email: email,
-        role: u.role,
-        createdAt: u.createdAt,
-    }));
+export const getAllUsers = async (): Promise<User[]> => {
+  const usersCollection = collection(db, 'users');
+  try {
+    const snapshot = await getDocs(usersCollection);
+    const usersList: User[] = [];
+    snapshot.forEach((doc) => {
+      const data = doc.data();
+      usersList.push({
+        email: data.email || doc.id,
+        role: data.role || 'user',
+        createdAt: data.createdAt || new Date().toISOString()
+      });
+    });
+    return usersList;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, 'users');
+    return [];
+  }
 };
 
-export const deleteUser = (email: string): boolean => {
-    const users = getStoredUsers();
-    if (users[email]) {
-        delete users[email];
-        storeUsers(users);
-        return true;
-    }
+export const deleteUser = async (email: string): Promise<boolean> => {
+  const normalizedEmail = email.trim().toLowerCase();
+  try {
+    const userDocRef = doc(db, 'users', normalizedEmail);
+    await deleteDoc(userDocRef);
+    return true;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, 'users/' + normalizedEmail);
     return false;
+  }
 };
