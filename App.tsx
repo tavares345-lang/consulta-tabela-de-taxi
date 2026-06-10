@@ -9,11 +9,41 @@ import UserManagement from './components/UserManagement';
 import * as authService from './services/authService';
 import * as fareService from './services/fareService';
 
+// Função utilitária para remover acentos e normalizar strings para busca e deduplicação
+const normalizeString = (str: string) => {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(authService.getCurrentUser());
   const [activeView, setActiveView] = useState<'table' | 'calculator' | 'users'>('table');
   const [fares, setFares] = useState<Fare[]>(fareService.getFares());
-  const [longTrips, setLongTrips] = useState<LongTrip[]>(fareService.getLongTrips());
+  const [longTrips, setLongTrips] = useState<LongTrip[]>(() => {
+    const raw = fareService.getLongTrips();
+    const seen = new Set<string>();
+    const cleaned: LongTrip[] = [];
+    raw.forEach(trip => {
+      const norm = normalizeString(trip.city);
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        cleaned.push({
+          ...trip,
+          city: trip.city.toUpperCase()
+        });
+      }
+    });
+    // Se houve duplicatas removidas ou alteração na caixa alta, atualiza permanentemente
+    if (cleaned.length !== raw.length) {
+      fareService.storeLongTrips(cleaned);
+    }
+    return cleaned;
+  });
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [regionFilter, setRegionFilter] = useState<string>('');
   const [longTripSearchTerm, setLongTripSearchTerm] = useState<string>('');
@@ -21,11 +51,6 @@ const App: React.FC = () => {
   
   const [pricePerKm, setPricePerKm] = useState<number>(() => fareService.getPricePerKm());
 
-  // Função utilitária para remover acentos e normalizar strings para busca
-  const normalizeString = (str: string) => {
-    if (!str) return "";
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-  };
 
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
@@ -122,7 +147,19 @@ const App: React.FC = () => {
   };
 
   const handleAddLongTrip = (newTrip: LongTrip) => {
-    const updated = [...longTrips, newTrip];
+    const norm = normalizeString(newTrip.city);
+    const existingIndex = longTrips.findIndex(t => normalizeString(t.city) === norm);
+    let updated: LongTrip[];
+    if (existingIndex !== -1) {
+      updated = [...longTrips];
+      updated[existingIndex] = {
+        ...updated[existingIndex],
+        kilometers: newTrip.kilometers,
+        city: newTrip.city.toUpperCase()
+      };
+    } else {
+      updated = [...longTrips, { ...newTrip, city: newTrip.city.toUpperCase() }];
+    }
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
     setLongTripSearchTerm(''); // Limpa busca para mostrar o novo item
@@ -130,13 +167,76 @@ const App: React.FC = () => {
   };
 
   const handleUpdateLongTrip = (updatedTrip: LongTrip) => {
-    const updated = longTrips.map(t => (t.id === updatedTrip.id ? updatedTrip : t));
+    const norm = normalizeString(updatedTrip.city);
+    const otherIndex = longTrips.findIndex(t => t.id !== updatedTrip.id && normalizeString(t.city) === norm);
+    let updated: LongTrip[];
+    if (otherIndex !== -1) {
+      updated = longTrips
+        .filter(t => t.id !== updatedTrip.id)
+        .map(t => normalizeString(t.city) === norm ? { ...t, kilometers: updatedTrip.kilometers, city: updatedTrip.city.toUpperCase() } : t);
+    } else {
+      updated = longTrips.map(t => (t.id === updatedTrip.id ? { ...updatedTrip, city: updatedTrip.city.toUpperCase() } : t));
+    }
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
   };
 
   const handleDeleteLongTrip = (tripId: string) => {
     const updated = longTrips.filter(t => t.id !== tripId);
+    setLongTrips(updated);
+    fareService.storeLongTrips(updated);
+  };
+
+  const handleImportLongTrips = (newTrips: LongTrip[], replace: boolean) => {
+    let updated: LongTrip[] = [];
+
+    if (replace) {
+      // Substituir tudo: cria uma lista sem duplicadas a partir do arquivo importado
+      const seen = new Set<string>();
+      for (const trip of newTrips) {
+        const norm = normalizeString(trip.city);
+        if (!seen.has(norm)) {
+          seen.add(norm);
+          updated.push({
+            ...trip,
+            city: trip.city.toUpperCase()
+          });
+        }
+      }
+    } else {
+      // Mesclar: atualiza as que já existem e adiciona as novas, mantendo a tabela anterior ativa
+      const mergedMap = new Map<string, LongTrip>();
+      
+      // Insere as existentes no map
+      longTrips.forEach(trip => {
+        mergedMap.set(normalizeString(trip.city), {
+          ...trip,
+          city: trip.city.toUpperCase()
+        });
+      });
+      
+      // Insere/atualiza com as importadas
+      newTrips.forEach((trip, index) => {
+        const norm = normalizeString(trip.city);
+        const existing = mergedMap.get(norm);
+        if (existing) {
+          mergedMap.set(norm, {
+            ...existing,
+            city: trip.city.toUpperCase(),
+            kilometers: trip.kilometers
+          });
+        } else {
+          mergedMap.set(norm, {
+            ...trip,
+            city: trip.city.toUpperCase(),
+            id: trip.id || `imp-lt-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 7)}`
+          });
+        }
+      });
+      
+      updated = Array.from(mergedMap.values());
+    }
+
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
   };
@@ -185,6 +285,7 @@ const App: React.FC = () => {
             onUpdateLongTrip={handleUpdateLongTrip}
             onDeleteLongTrip={handleDeleteLongTrip}
             allLongTrips={longTrips}
+            onImportLongTrips={handleImportLongTrips}
           />
         );
       case 'users':

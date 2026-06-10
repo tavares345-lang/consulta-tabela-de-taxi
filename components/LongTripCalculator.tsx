@@ -1,10 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { LongTrip } from '../types';
 import { PlusIcon } from './icons/PlusIcon';
 import { PencilIcon } from './icons/PencilIcon';
 import { TrashIcon } from './icons/TrashIcon';
 import { XIcon } from './icons/XIcon';
+import { UploadIcon } from './icons/UploadIcon';
+import { DownloadIcon } from './icons/DownloadIcon';
 
 interface LongTripModalProps {
   trip: LongTrip | null;
@@ -63,18 +65,27 @@ interface LongTripCalculatorProps {
   onAddLongTrip: (trip: LongTrip) => void;
   onUpdateLongTrip: (trip: LongTrip) => void;
   onDeleteLongTrip: (id: string) => void;
+  onImportLongTrips: (trips: LongTrip[], replace: boolean) => void;
 }
 
 const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({ 
     longTrips, allLongTrips, isAdmin, pricePerKm, setPricePerKm, searchTerm, setSearchTerm, 
     kmSearchTerm, setKmSearchTerm,
-    onAddLongTrip, onUpdateLongTrip, onDeleteLongTrip 
+    onAddLongTrip, onUpdateLongTrip, onDeleteLongTrip, onImportLongTrips
 }) => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingTrip, setEditingTrip] = useState<LongTrip | null>(null);
 
     const [localPriceInput, setLocalPriceInput] = useState(pricePerKm.toString().replace('.', ','));
     const [saveSuccess, setSaveSuccess] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // States do Custom Import Modal
+    const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+    const [parsedImportTrips, setParsedImportTrips] = useState<LongTrip[]>([]);
+    const [importErrorMsg, setImportErrorMsg] = useState<string | null>(null);
+    const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
+    const [importAction, setImportAction] = useState<'replace' | 'merge'>('merge');
 
     useEffect(() => {
         setLocalPriceInput(pricePerKm.toString().replace('.', ','));
@@ -87,6 +98,123 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 2000);
         }
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const text = e.target?.result as string;
+            if (!text) return;
+
+            try {
+                // Split lines, ignoring carriage returns and trimming empty spaces safely
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                if (lines.length <= 1) {
+                    setImportErrorMsg('Nenhum dado válido encontrado no arquivo CSV.');
+                    setParsedImportTrips([]);
+                    setIsImportModalOpen(true);
+                    return;
+                }
+
+                const newTrips: LongTrip[] = lines.slice(1)
+                    .map((line, index) => {
+                        let city = '';
+                        let kilometers = 0;
+
+                        // Auto-detect delimiter: either semicolon or comma
+                        const delimiter = line.includes(';') ? ';' : ',';
+
+                        if (delimiter === ';') {
+                            const parts = line.split(';');
+                            city = parts[0]?.replace(/^"|"$/g, '').trim() || '';
+                            const kmStr = parts[1]?.replace(/^"|"$/g, '').replace(',', '.').trim() || '';
+                            kilometers = parseFloat(kmStr) || 0;
+                        } else {
+                            // Commas, taking quoted values into consideration
+                            if (line.startsWith('"')) {
+                                const nextQuoteIndex = line.indexOf('"', 1);
+                                if (nextQuoteIndex !== -1) {
+                                    city = line.substring(1, nextQuoteIndex).trim();
+                                    const rest = line.substring(nextQuoteIndex + 1);
+                                    const kmPart = rest.replace(/^[, ]+/, '').replace(/^"|"$/g, '').replace(',', '.').trim();
+                                    kilometers = parseFloat(kmPart) || 0;
+                                } else {
+                                    const parts = line.split(',');
+                                    city = parts[0]?.replace(/^"|"$/g, '').trim() || '';
+                                    const kmStr = parts[1]?.replace(/^"|"$/g, '').replace(',', '.').trim() || '';
+                                    kilometers = parseFloat(kmStr) || 0;
+                                }
+                            } else {
+                                const parts = line.split(',');
+                                city = parts[0]?.replace(/^"|"$/g, '').trim() || '';
+                                const kmStr = parts[1]?.replace(/^"|"$/g, '').replace(',', '.').trim() || '';
+                                kilometers = parseFloat(kmStr) || 0;
+                            }
+                        }
+
+                        if (!city || isNaN(kilometers) || kilometers <= 0) return null;
+
+                        return {
+                            id: `imp-lt-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 7)}`,
+                            city: city.toUpperCase(),
+                            kilometers,
+                        };
+                    }).filter((t): t is LongTrip => t !== null);
+
+                if (newTrips.length > 0) {
+                    setParsedImportTrips(newTrips);
+                    setImportErrorMsg(null);
+                    setImportSuccessMsg(null);
+                    setIsImportModalOpen(true);
+                } else {
+                    setImportErrorMsg('Nenhum dado válido de viagem encontrado no CSV.');
+                    setParsedImportTrips([]);
+                    setIsImportModalOpen(true);
+                }
+            } catch (error) {
+                setImportErrorMsg('Erro ao processar o arquivo CSV de viagens.');
+                setParsedImportTrips([]);
+                setIsImportModalOpen(true);
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    };
+
+    const handleConfirmImport = () => {
+        if (parsedImportTrips.length === 0) return;
+
+        onImportLongTrips(parsedImportTrips, importAction === 'replace');
+        
+        const modeText = importAction === 'replace' ? 'substituídos' : 'mesclados/atualizados';
+        setImportSuccessMsg(`Sucesso! ${parsedImportTrips.length} registros foram ${modeText} na tabela.`);
+        setParsedImportTrips([]);
+
+        setTimeout(() => {
+            setIsImportModalOpen(false);
+            setImportSuccessMsg(null);
+        }, 2200);
+    };
+
+    const handleExport = () => {
+        if (allLongTrips.length === 0) return;
+
+        const header = "Cidade,DistanciaKM\n";
+        const csvRows = allLongTrips.map(trip => {
+            return `"${trip.city}",${trip.kilometers.toFixed(1)}`;
+        }).join('\n');
+
+        const blob = new Blob(["\uFEFF" + header + csvRows], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `tabela_viagens_longas_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
     };
 
     return (
@@ -105,6 +233,102 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                   setEditingTrip(null);
                 }} 
               />
+            )}
+
+            {isImportModalOpen && (
+                <div id="import-modal" className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+                    <div className="bg-white w-full max-w-lg rounded-[32px] shadow-2xl p-8 border border-gray-100 relative animate-in zoom-in-95 duration-200">
+                        <button 
+                            onClick={() => setIsImportModalOpen(false)} 
+                            className="absolute top-6 right-6 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors font-black"
+                        >
+                            <XIcon className="w-5 h-5" />
+                        </button>
+
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                                <UploadIcon className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-gray-800 uppercase tracking-widest">Importar Viagens Longas (CSV)</h3>
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">Configuração e validação antes da importação</p>
+                            </div>
+                        </div>
+
+                        {importErrorMsg ? (
+                            <div className="bg-red-50 border border-red-100 text-red-700 p-5 rounded-2xl text-xs font-bold uppercase mb-6 flex flex-col items-center justify-center text-center">
+                                <span className="text-lg mb-1">⚠️</span>
+                                {importErrorMsg}
+                            </div>
+                        ) : importSuccessMsg ? (
+                            <div className="bg-green-50 border border-green-100 text-green-700 p-8 rounded-2xl text-xs font-bold uppercase mb-4 flex flex-col items-center justify-center text-center">
+                                <span className="text-3xl mb-2">🎉</span>
+                                {importSuccessMsg}
+                            </div>
+                        ) : (
+                            <div className="space-y-6">
+                                <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl text-center">
+                                    <p className="text-xs font-bold text-gray-600 uppercase">Registros Válidos Detectados</p>
+                                    <p className="text-4xl font-black text-blue-600 mt-1">{parsedImportTrips.length}</p>
+                                    <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mt-2">Dados normalizados em caixa alta</p>
+                                </div>
+
+                                <div className="space-y-3">
+                                    <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest">O que deseja fazer?</label>
+                                    
+                                    <div 
+                                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${importAction === 'replace' ? 'border-blue-600 bg-blue-50/20' : 'border-gray-250 hover:border-gray-300 bg-gray-50'}`}
+                                        onClick={() => setImportAction('replace')}
+                                    >
+                                        <input 
+                                            type="radio" 
+                                            name="importAction" 
+                                            checked={importAction === 'replace'} 
+                                            onChange={() => setImportAction('replace')}
+                                            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" 
+                                        />
+                                        <div>
+                                            <p className="text-xs font-black text-gray-800 uppercase tracking-tight">Substituir Tabela Inteira (Recomendado)</p>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 leading-relaxed">Exclui permanentemente todos os registros anteriores e mantém apenas as novas viagens importadas do arquivo. Remove duplicados automáticos.</p>
+                                        </div>
+                                    </div>
+
+                                    <div 
+                                        className={`p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-start gap-3 ${importAction === 'merge' ? 'border-blue-600 bg-blue-50/20' : 'border-gray-250 hover:border-gray-300 bg-gray-50'}`}
+                                        onClick={() => setImportAction('merge')}
+                                    >
+                                        <input 
+                                            type="radio" 
+                                            name="importAction" 
+                                            checked={importAction === 'merge'} 
+                                            onChange={() => setImportAction('merge')}
+                                            className="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300" 
+                                        />
+                                        <div>
+                                            <p className="text-xs font-black text-gray-800 uppercase tracking-tight">Mesclar e Atualizar sem Duplicados</p>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase mt-1 leading-relaxed">Mantém as viagens antigas, atualiza a quilometragem daquelas que repetirem no arquivo e adiciona as novas com segurança.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 pt-2">
+                                    <button 
+                                        onClick={() => setIsImportModalOpen(false)}
+                                        className="flex-1 py-4 bg-gray-100 hover:bg-gray-200 text-gray-750 rounded-2xl text-xs font-black uppercase tracking-widest transition-colors"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button 
+                                        onClick={handleConfirmImport}
+                                        className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest transition-colors shadow-lg shadow-blue-500/10"
+                                    >
+                                        Confirmar Importação
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
             )}
            
             {isAdmin && (
@@ -141,7 +365,18 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                 <p className="text-[11px] text-gray-400 font-bold uppercase mt-0.5">KM de referência para cobrança fixa</p>
                             </div>
                         </div>
-                        <div className="flex items-center space-x-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                            <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept=".csv" />
+                            {isAdmin && (
+                                <button onClick={() => fileInputRef.current?.click()} className="p-2.5 text-blue-500 hover:bg-blue-50 rounded-xl transition-colors border border-transparent hover:border-blue-100 flex items-center gap-1.5 text-xs font-black uppercase" title="Importar CSV de Viagens">
+                                    <UploadIcon className="w-5 h-5" />
+                                    <span className="hidden sm:inline">Importar</span>
+                                </button>
+                            )}
+                            <button onClick={handleExport} className="p-2.5 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-100 flex items-center gap-1.5 text-xs font-black uppercase" title="Exportar CSV de Viagens">
+                                <DownloadIcon className="w-5 h-5" />
+                                <span className="hidden sm:inline">Exportar</span>
+                            </button>
                             <span className="bg-yellow-100 text-yellow-700 px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-tighter">
                                 {longTrips.length} Cidades localizadas
                             </span>
