@@ -25,12 +25,54 @@
         }
       },
       "required": ["email", "role", "passwordHash", "createdAt"]
+    },
+    "DataCollection": {
+      "title": "DataCollection",
+      "description": "List of fares or long trips stored in a single document for optimized reads",
+      "type": "object",
+      "properties": {
+        "fares": {
+          "type": "array",
+          "description": "Array of fare destinations"
+        },
+        "trips": {
+          "type": "array",
+          "description": "Array of long trips"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of the last update"
+        }
+      }
+    },
+    "SettingsCollection": {
+      "title": "SettingsCollection",
+      "description": "System configuration parameters",
+      "type": "object",
+      "properties": {
+        "pricePerKm": {
+          "type": "number",
+          "description": "Base price per kilometer"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Timestamp of the last settings change"
+        }
+      }
     }
   },
   "firestore": {
     "users/{userId}": {
       "schema": "User",
       "description": "Collection of users registered in the system"
+    },
+    "data/{documentId}": {
+      "schema": "DataCollection",
+      "description": "Optimized single-document stores for fares and long trips lists"
+    },
+    "settings/{documentId}": {
+      "schema": "SettingsCollection",
+      "description": "Stores general parameters like price per kilometer"
     }
   }
 }
