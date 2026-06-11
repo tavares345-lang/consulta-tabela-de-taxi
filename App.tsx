@@ -8,8 +8,9 @@ import AuthPage from './components/AuthPage';
 import UserManagement from './components/UserManagement';
 import * as authService from './services/authService';
 import * as fareService from './services/fareService';
-import { db } from './services/firebase';
+import { db, auth } from './services/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { signInAnonymously } from 'firebase/auth';
 
 // Função utilitária para remover acentos e normalizar strings para busca e deduplicação
 const normalizeString = (str: string) => {
@@ -52,31 +53,118 @@ const App: React.FC = () => {
   const [longTripKmSearchTerm, setLongTripKmSearchTerm] = useState<string>('');
   
   const [pricePerKm, setPricePerKm] = useState<number>(() => fareService.getPricePerKm());
+  
+  const [syncStatus, setSyncStatus] = useState<'syncing' | 'synced' | 'error'>('synced');
+  const [syncErrorMessage, setSyncErrorMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Autentica anonimamente no Firebase para que a conexão seja autenticada,
+    // o que é um requisito de segurança para vários ambientes do Firestore.
+    signInAnonymously(auth)
+      .then(() => {
+        console.log("Autenticação anônima do Firebase estabelecida.");
+      })
+      .catch((err) => {
+        console.warn("Autenticação anônima temporariamente desabilitada ou falhou, operando em modo offline/público:", err);
+      });
+  }, []);
+
+  enum OperationType {
+    CREATE = 'create',
+    UPDATE = 'update',
+    DELETE = 'delete',
+    LIST = 'list',
+    GET = 'get',
+    WRITE = 'write',
+  }
+
+  interface FirestoreErrorInfo {
+    error: string;
+    operationType: OperationType;
+    path: string | null;
+    authInfo: {
+      userId?: string | null;
+      email?: string | null;
+      emailVerified?: boolean | null;
+      isAnonymous?: boolean | null;
+      tenantId?: string | null;
+      providerInfo?: {
+        providerId?: string | null;
+        email?: string | null;
+      }[];
+    }
+  }
+
+  const handleFirestoreErrorLocal = (error: unknown, operationType: OperationType, path: string | null) => {
+    const errInfo: FirestoreErrorInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: currentUser?.email || 'Anonymous',
+        email: currentUser?.email || 'Anonymous',
+        emailVerified: true,
+        isAnonymous: false,
+      },
+      operationType,
+      path
+    };
+    const jsonStr = JSON.stringify(errInfo);
+    console.error('Firestore Error: ', jsonStr);
+    throw new Error(jsonStr);
+  };
 
   // Sincroniza em tempo real com o Firestore do Firebase para persistir na implantação
   useEffect(() => {
+    setSyncStatus('syncing');
+
     const unsubFares = onSnapshot(doc(db, 'data', 'fares_doc'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (data && Array.isArray(data.fares)) {
+        if (data && Array.isArray(data.fares) && data.fares.length > 0) {
           setFares(data.fares);
           fareService.storeFares(data.fares);
+          setSyncStatus('synced');
+          setSyncErrorMessage(null);
+        } else {
+          // Documento existe mas está vazio ou corrompido - vamos reiniciar a partir do local
+          const localFares = fareService.getFares();
+          if (localFares && localFares.length > 0) {
+            setSyncStatus('syncing');
+            setDoc(doc(db, 'data', 'fares_doc'), { fares: localFares, updatedAt: new Date().toISOString() })
+              .then(() => {
+                setSyncStatus('synced');
+                setSyncErrorMessage(null);
+              })
+              .catch(err => {
+                setSyncStatus('error');
+                setSyncErrorMessage(`Erro ao salvar tarifas no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+                handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/fares_doc');
+              });
+          }
         }
       } else {
         // Envia do localStorage para persistir na nuvem na primeira execução
         const localFares = fareService.getFares();
         setDoc(doc(db, 'data', 'fares_doc'), { fares: localFares, updatedAt: new Date().toISOString() })
-          .catch(err => console.error("Erro ao inicializar tarifas no Firestore:", err));
+          .then(() => {
+            setSyncStatus('synced');
+            setSyncErrorMessage(null);
+          })
+          .catch(err => {
+            setSyncStatus('error');
+            setSyncErrorMessage(`Erro ao inicializar tarifas no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+            handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/fares_doc');
+          });
       }
     }, (error) => {
-      console.error("Erro ao escutar tarifas no Firestore:", error);
+      setSyncStatus('error');
+      setSyncErrorMessage(`Erro ao escutar tarifas no Firebase: ${error.message}`);
+      handleFirestoreErrorLocal(error, OperationType.GET, 'data/fares_doc');
     });
 
     const unsubLongTrips = onSnapshot(doc(db, 'data', 'long_trips_doc'), (snapshot) => {
       if (snapshot.exists()) {
         const data = snapshot.data();
-        if (data && Array.isArray(data.trips)) {
+        if (data && Array.isArray(data.trips) && data.trips.length > 0) {
           // Garante cidades em caixa alta e sem duplicados
           const seen = new Set<string>();
           const cleaned: LongTrip[] = [];
@@ -92,14 +180,42 @@ const App: React.FC = () => {
           });
           setLongTrips(cleaned);
           fareService.storeLongTrips(cleaned);
+          setSyncStatus('synced');
+          setSyncErrorMessage(null);
+        } else {
+          // Documento existe mas está vazio ou corrompido - vamos reiniciar a partir do local
+          const localTrips = fareService.getLongTrips();
+          if (localTrips && localTrips.length > 0) {
+            setSyncStatus('syncing');
+            setDoc(doc(db, 'data', 'long_trips_doc'), { trips: localTrips, updatedAt: new Date().toISOString() })
+              .then(() => {
+                setSyncStatus('synced');
+                setSyncErrorMessage(null);
+              })
+              .catch(err => {
+                setSyncStatus('error');
+                setSyncErrorMessage(`Erro ao salvar viagens longas no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+                handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/long_trips_doc');
+              });
+          }
         }
       } else {
         const localTrips = fareService.getLongTrips();
         setDoc(doc(db, 'data', 'long_trips_doc'), { trips: localTrips, updatedAt: new Date().toISOString() })
-          .catch(err => console.error("Erro ao inicializar viagens longas no Firestore:", err));
+          .then(() => {
+            setSyncStatus('synced');
+            setSyncErrorMessage(null);
+          })
+          .catch(err => {
+            setSyncStatus('error');
+            setSyncErrorMessage(`Erro ao inicializar viagens longas no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+            handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/long_trips_doc');
+          });
       }
     }, (error) => {
-      console.error("Erro ao escutar viagens longas no Firestore:", error);
+      setSyncStatus('error');
+      setSyncErrorMessage(`Erro ao escutar viagens longas no Firebase: ${error.message}`);
+      handleFirestoreErrorLocal(error, OperationType.GET, 'data/long_trips_doc');
     });
 
     const unsubPricing = onSnapshot(doc(db, 'settings', 'pricing_doc'), (snapshot) => {
@@ -108,14 +224,39 @@ const App: React.FC = () => {
         if (data && typeof data.pricePerKm === 'number') {
           setPricePerKm(data.pricePerKm);
           fareService.storePricePerKm(data.pricePerKm);
+          setSyncStatus('synced');
+          setSyncErrorMessage(null);
+        } else {
+          const localPrice = fareService.getPricePerKm();
+          setSyncStatus('syncing');
+          setDoc(doc(db, 'settings', 'pricing_doc'), { pricePerKm: localPrice, updatedAt: new Date().toISOString() })
+            .then(() => {
+              setSyncStatus('synced');
+              setSyncErrorMessage(null);
+            })
+            .catch(err => {
+              setSyncStatus('error');
+              setSyncErrorMessage(`Erro ao salvar precificação no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+              handleFirestoreErrorLocal(err, OperationType.WRITE, 'settings/pricing_doc');
+            });
         }
       } else {
         const localPrice = fareService.getPricePerKm();
         setDoc(doc(db, 'settings', 'pricing_doc'), { pricePerKm: localPrice, updatedAt: new Date().toISOString() })
-          .catch(err => console.error("Erro ao inicializar precificação no Firestore:", err));
+          .then(() => {
+            setSyncStatus('synced');
+            setSyncErrorMessage(null);
+          })
+          .catch(err => {
+            setSyncStatus('error');
+            setSyncErrorMessage(`Erro ao inicializar precificação no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+            handleFirestoreErrorLocal(err, OperationType.WRITE, 'settings/pricing_doc');
+          });
       }
     }, (error) => {
-      console.error("Erro ao escutar precificação no Firestore:", error);
+      setSyncStatus('error');
+      setSyncErrorMessage(`Erro ao escutar precificação no Firebase: ${error.message}`);
+      handleFirestoreErrorLocal(error, OperationType.GET, 'settings/pricing_doc');
     });
 
     const handleStorageChange = (e: StorageEvent) => {
@@ -198,8 +339,17 @@ const App: React.FC = () => {
     const updated = [...fares, newFare];
     setFares(updated);
     fareService.storeFares(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'fares_doc'), { fares: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar tarifas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao adicionar tarifa no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/fares_doc');
+      });
     setSearchTerm(''); // Limpa busca para mostrar o novo item
     setRegionFilter('');
   };
@@ -208,24 +358,86 @@ const App: React.FC = () => {
     const updated = fares.map(f => (f.id === updatedFare.id ? updatedFare : f));
     setFares(updated);
     fareService.storeFares(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'fares_doc'), { fares: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar tarifas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao atualizar tarifa no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/fares_doc');
+      });
   };
 
   const handleDeleteFare = (fareId: string) => {
     const updated = fares.filter(f => f.id !== fareId);
     setFares(updated);
     fareService.storeFares(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'fares_doc'), { fares: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar tarifas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao excluir tarifa no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/fares_doc');
+      });
   };
   
   const handleImportFares = (newFares: Fare[]) => {
-    const updated = [...fares, ...newFares];
+    const mergedMap = new Map<string, Fare>();
+    
+    // Insere as tarifas existentes no map usando a destinação normalizada como chave
+    fares.forEach(fare => {
+      mergedMap.set(normalizeString(fare.destination), {
+        ...fare,
+        destination: fare.destination.toUpperCase()
+      });
+    });
+    
+    // Atualiza/Insere com as importadas
+    newFares.forEach((fare, index) => {
+      const norm = normalizeString(fare.destination);
+      const existing = mergedMap.get(norm);
+      if (existing) {
+        // Se já existe, preserva o registro original e apenas atualiza os valores
+        mergedMap.set(norm, {
+          ...existing,
+          destination: fare.destination.toUpperCase(),
+          region: fare.region ? fare.region.toUpperCase() : existing.region,
+          meterValue: fare.meterValue,
+          counterValue: fare.counterValue
+        });
+      } else {
+        // Se é inédito, adiciona
+        mergedMap.set(norm, {
+          ...fare,
+          destination: fare.destination.toUpperCase(),
+          region: fare.region ? fare.region.toUpperCase() : "GERAL",
+          id: fare.id || `imp-fr-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 7)}`
+        });
+      }
+    });
+    
+    const updated = Array.from(mergedMap.values());
+    
     setFares(updated);
     fareService.storeFares(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'fares_doc'), { fares: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar tarifas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao importar tarifas no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/fares_doc');
+      });
   };
 
   const handleAddLongTrip = (newTrip: LongTrip) => {
@@ -244,8 +456,17 @@ const App: React.FC = () => {
     }
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'long_trips_doc'), { trips: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar viagens longas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao adicionar viagem no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/long_trips_doc');
+      });
     setLongTripSearchTerm(''); // Limpa busca para mostrar o novo item
     setLongTripKmSearchTerm('');
   };
@@ -263,16 +484,34 @@ const App: React.FC = () => {
     }
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'long_trips_doc'), { trips: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar viagens longas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao atualizar viagem no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/long_trips_doc');
+      });
   };
 
   const handleDeleteLongTrip = (tripId: string) => {
     const updated = longTrips.filter(t => t.id !== tripId);
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'long_trips_doc'), { trips: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar viagens longas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao remover viagem no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/long_trips_doc');
+      });
   };
 
   const handleImportLongTrips = (newTrips: LongTrip[], replace: boolean) => {
@@ -327,15 +566,33 @@ const App: React.FC = () => {
 
     setLongTrips(updated);
     fareService.storeLongTrips(updated);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'data', 'long_trips_doc'), { trips: updated, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar viagens longas no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao importar viagens no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'data/long_trips_doc');
+      });
   };
 
   const handleSetPricePerKm = (price: number) => {
     setPricePerKm(price);
     fareService.storePricePerKm(price);
+    setSyncStatus('syncing');
     setDoc(doc(db, 'settings', 'pricing_doc'), { pricePerKm: price, updatedAt: new Date().toISOString() })
-      .catch(err => console.error("Erro ao salvar preço por km no Firestore:", err));
+      .then(() => {
+        setSyncStatus('synced');
+        setSyncErrorMessage(null);
+      })
+      .catch(err => {
+        setSyncStatus('error');
+        setSyncErrorMessage(`Erro ao atualizar preço por km no Firebase: ${err instanceof Error ? err.message : String(err)}`);
+        handleFirestoreErrorLocal(err, OperationType.WRITE, 'settings/pricing_doc');
+      });
   };
 
   if (!currentUser) {
@@ -395,6 +652,37 @@ const App: React.FC = () => {
         activeView={activeView}
         onViewChange={setActiveView}
       />
+      
+      {syncStatus === 'syncing' && (
+        <div className="bg-yellow-50 border-b border-yellow-105-normal px-4 py-2 text-center text-[10px] font-black text-yellow-800 uppercase tracking-widest flex items-center justify-center gap-2">
+          <svg className="animate-spin h-3.5 w-3.5 text-yellow-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          Sincronizando com o Firebase Cloud...
+        </div>
+      )}
+      
+      {syncStatus === 'error' && (
+        <div className="bg-red-50 border-b border-red-100 px-6 py-3 text-center text-xs text-red-700 font-semibold flex flex-col sm:flex-row items-center justify-center gap-2">
+          <span className="font-black uppercase tracking-widest bg-red-600 text-white px-2 py-0.5 rounded text-[9px]">Erro Firebase</span>
+          <span className="font-medium text-xs text-red-800">{syncErrorMessage}</span>
+          <button 
+            type="button" 
+            onClick={() => window.location.reload()} 
+            className="mt-1 sm:mt-0 sm:ml-4 bg-red-100 hover:bg-red-200 text-red-800 font-extrabold px-3 py-1 rounded-md transition-colors text-[10px] uppercase tracking-wider">
+            Reconectar
+          </button>
+        </div>
+      )}
+
+      {syncStatus === 'synced' && (
+        <div className="bg-emerald-50/50 border-b border-emerald-100/30 px-4 py-1 text-center text-[9px] font-extrabold text-emerald-700 uppercase tracking-widest flex items-center justify-center gap-1.5 opacity-80">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          Conectado e Sincronizado com Firebase
+        </div>
+      )}
+
       <main className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
         {renderActiveView()}
       </main>

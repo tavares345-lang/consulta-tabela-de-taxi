@@ -134,22 +134,26 @@ const FareTable: React.FC<FareTableProps> = ({
             const text = e.target?.result as string;
             if (!text) return;
 
-            try {
+             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
                 const newFares: Fare[] = lines.slice(1)
                     .map((line, index) => {
-                        const parts = line.split(',');
+                        const parts = line.includes(';') ? line.split(';') : line.split(',');
                         if (parts.length < 4) return null;
                         
                         const destination = parts[0]?.replace(/^"|"$/g, '').trim();
                         const region = parts[1]?.replace(/^"|"$/g, '').trim();
-                        const meterValue = parseFloat(parts[2]);
-                        const counterValue = parseFloat(parts[3]);
+                        
+                        const meterStr = parts[2]?.replace(/^"|"$/g, '').replace(',', '.').trim();
+                        const counterStr = parts[3]?.replace(/^"|"$/g, '').replace(',', '.').trim();
+                        
+                        const meterValue = parseFloat(meterStr);
+                        const counterValue = parseFloat(counterStr);
 
                         if (!destination || !region || isNaN(meterValue) || isNaN(counterValue)) return null;
                         
                         return {
-                            id: `imp-${Date.now()}-${index}`,
+                            id: `imp-${Date.now()}-${index}-${Math.random().toString(36).substring(2, 5)}`,
                             region,
                             destination,
                             meterValue,
