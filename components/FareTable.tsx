@@ -287,14 +287,17 @@ const FareTable: React.FC<FareTableProps> = ({
                         <td className="px-6 py-2 md:px-8 md:py-6 block md:table-cell">
                              <div className="flex justify-between items-center md:block">
                                 <span className="font-bold text-[9px] text-gray-300 md:hidden uppercase tracking-widest block">Taxímetro</span>
-                                <span className="text-sm text-gray-500 font-bold">R$ {fare.meterValue.toFixed(2).replace('.', ',')}</span>
+                                <div className="flex flex-col items-end md:items-start">
+                                  <span className="text-xl text-gray-900 font-black">R$ {fare.meterValue.toFixed(2).replace('.', ',')}</span>
+                                  <span className="text-[9px] text-amber-600 font-black uppercase tracking-tighter">Estimado</span>
+                                </div>
                             </div>
                         </td>
                         <td className="p-6 md:px-8 md:py-6 block md:table-cell md:bg-transparent">
                             <div className="flex justify-between items-center md:block">
                                 <span className="font-bold text-[9px] text-gray-300 md:hidden uppercase tracking-widest block">Balcão</span>
                                 <div className="flex flex-col items-end md:items-start">
-                                  <span className="text-xl text-gray-900 font-black">R$ {fare.counterValue.toFixed(2).replace('.', ',')}</span>
+                                  <span className="text-sm text-gray-500 font-bold">R$ {fare.counterValue.toFixed(2).replace('.', ',')}</span>
                                   <span className="text-[9px] text-green-600 font-black uppercase tracking-tighter">Desconto Aplicado</span>
                                 </div>
                             </div>

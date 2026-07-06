@@ -36,21 +36,19 @@ const FareCard: React.FC<FareCardProps> = ({ fare, isAdmin, onEdit, onDelete }) 
         
         <hr className="my-3 border-gray-200" />
         
-        <div className="text-center">
-            <div className="flex items-center justify-center text-gray-500 text-xs mb-1">
-                <span>Valor aproximado taxímetro</span>
-                <span className="w-1.5 h-1.5 bg-green-400 rounded-full ml-1.5"></span>
+        <div className="text-center bg-yellow-50/50 p-4 rounded-2xl border border-yellow-100 mb-4 shadow-sm">
+            <div className="flex items-center justify-center text-yellow-800 text-[10px] font-black uppercase tracking-wider mb-1">
+                <span>Aprox. Taxímetro</span>
+                <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full ml-1.5"></span>
             </div>
-            <p className="text-3xl font-bold text-gray-700">
+            <p className="text-3xl font-black text-gray-900">
             R$ {fare.meterValue.toFixed(2).replace('.', ',')}
             </p>
         </div>
         
-        <hr className="my-3 border-gray-200" />
-
-        <div className="text-center">
-            <p className="text-gray-500 text-xs">Valor com desconto</p>
-            <p className="text-3xl font-bold text-gray-900">
+        <div className="text-center pt-2">
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider mb-0.5">Valor Balcão</p>
+            <p className="text-lg font-bold text-gray-500">
             R$ {fare.counterValue.toFixed(2).replace('.', ',')}
             </p>
         </div>
