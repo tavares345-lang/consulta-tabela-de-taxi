@@ -7,6 +7,7 @@ import { TrashIcon } from './icons/TrashIcon';
 import { XIcon } from './icons/XIcon';
 import { UploadIcon } from './icons/UploadIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
+import { SearchHistory, addSearchToHistory } from './SearchHistory';
 
 interface LongTripModalProps {
   trip: LongTrip | null;
@@ -406,6 +407,14 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                             )}
                         </div>
                     </div>
+                    
+                    <div className="mt-4">
+                        <SearchHistory 
+                          historyKey="long_trips" 
+                          currentSearchTerm={searchTerm} 
+                          onSelectSearch={setSearchTerm} 
+                        />
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden">
@@ -424,7 +433,16 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                     <td className="p-6 md:px-8 md:py-6 block md:table-cell">
                                         <div className="flex justify-between items-center md:block">
                                             <span className="font-black text-[9px] text-gray-300 md:hidden uppercase tracking-widest">Cidade</span>
-                                            <span className="text-lg font-black text-gray-800 uppercase tracking-tight">{trip.city}</span>
+                                            <span 
+                                              onClick={() => {
+                                                setSearchTerm(trip.city);
+                                                addSearchToHistory('long_trips', trip.city);
+                                              }}
+                                              className="text-lg font-black text-gray-800 uppercase tracking-tight hover:text-amber-600 hover:underline cursor-pointer transition-colors"
+                                              title="Clique para pesquisar e adicionar ao histórico"
+                                            >
+                                              {trip.city}
+                                            </span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-2 md:px-8 md:py-6 block md:table-cell">

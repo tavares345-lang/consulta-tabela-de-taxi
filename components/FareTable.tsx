@@ -7,6 +7,7 @@ import { TrashIcon } from './icons/TrashIcon';
 import { UploadIcon } from './icons/UploadIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { XIcon } from './icons/XIcon';
+import { SearchHistory, addSearchToHistory } from './SearchHistory';
 
 interface FareModalProps {
   fare: Fare | null;
@@ -253,6 +254,12 @@ const FareTable: React.FC<FareTableProps> = ({
                 </div>
             </div>
         </div>
+        
+        <SearchHistory 
+          historyKey="fares" 
+          currentSearchTerm={searchTerm} 
+          onSelectSearch={setSearchTerm} 
+        />
       </div>
       
       <div className="bg-white rounded-[32px] shadow-xl border border-gray-100 overflow-hidden">
@@ -275,7 +282,16 @@ const FareTable: React.FC<FareTableProps> = ({
                         <td className="p-6 md:px-8 md:py-6 block md:table-cell">
                             <div className="flex justify-between items-start md:block">
                                 <span className="font-bold text-[9px] text-gray-300 md:hidden uppercase tracking-widest mb-1.5 block">Destino</span>
-                                <span className="text-base font-black text-gray-800 uppercase tracking-tight leading-tight">{fare.destination}</span>
+                                <span 
+                                  onClick={() => {
+                                    setSearchTerm(fare.destination);
+                                    addSearchToHistory('fares', fare.destination);
+                                  }}
+                                  className="text-base font-black text-gray-800 uppercase tracking-tight leading-tight hover:text-amber-600 hover:underline cursor-pointer transition-colors"
+                                  title="Clique para pesquisar e adicionar ao histórico"
+                                >
+                                  {fare.destination}
+                                </span>
                             </div>
                         </td>
                         <td className="px-6 py-2 md:px-8 md:py-6 block md:table-cell">
