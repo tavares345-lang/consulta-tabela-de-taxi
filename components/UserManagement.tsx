@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import * as authService from '../services/authService';
 import type { User } from '../types';
 import { TrashIcon } from './icons/TrashIcon';
+import { db } from '../services/firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { Search, Clock, MapPin, User as UserIcon, Trash2 } from 'lucide-react';
+
+interface GlobalSearchLog {
+  id: string;
+  term: string;
+  historyKey: 'fares' | 'long_trips';
+  timestamp: string;
+  userEmail: string;
+}
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -12,6 +23,48 @@ const UserManagement: React.FC = () => {
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Estados do histórico de consultas globais (para Admin)
+  const [globalSearches, setGlobalSearches] = useState<GlobalSearchLog[]>([]);
+  const [searchesLoading, setSearchesLoading] = useState(true);
+
+  // Escuta as consultas globais em tempo real
+  useEffect(() => {
+    setSearchesLoading(true);
+    const docRef = doc(db, 'data', 'global_searches_doc');
+    const unsub = onSnapshot(docRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        if (data && Array.isArray(data.searches)) {
+          setGlobalSearches(data.searches);
+        } else {
+          setGlobalSearches([]);
+        }
+      } else {
+        setGlobalSearches([]);
+      }
+      setSearchesLoading(false);
+    }, (error) => {
+      console.error("Erro ao escutar buscas globais do Firestore:", error);
+      setSearchesLoading(false);
+    });
+
+    return () => unsub();
+  }, []);
+
+  const handleClearGlobalSearches = async () => {
+    if (window.confirm('Tem certeza de que deseja limpar o histórico de consultas de todos os usuários?')) {
+      try {
+        await setDoc(doc(db, 'data', 'global_searches_doc'), {
+          searches: [],
+          updatedAt: new Date().toISOString()
+        });
+        setActionSuccess('Histórico de consultas globais limpo com sucesso.');
+      } catch (e) {
+        setActionError('Erro ao limpar histórico de consultas globais.');
+      }
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -95,7 +148,8 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="flex flex-col gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Formulário de Cadastro */}
       <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 h-fit border border-gray-100">
         <div className="mb-6 pb-4 border-b border-gray-100">
@@ -247,7 +301,111 @@ const UserManagement: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+
+    {/* Histórico de Consultas dos Usuários (Apenas Admin) */}
+    <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8 border border-gray-100">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+        <div>
+          <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase flex items-center gap-2">
+            <Search className="w-6 h-6 text-amber-500 animate-pulse" />
+            Últimas Consultas dos Usuários
+          </h2>
+          <p className="text-xs text-gray-500 font-extrabold uppercase tracking-wider mt-1">
+            Registro em tempo real de buscas feitas no tarifário e viagens longas
+          </p>
+        </div>
+        {globalSearches.length > 0 && (
+          <button
+            onClick={handleClearGlobalSearches}
+            className="w-full sm:w-auto bg-red-50 text-red-600 hover:bg-red-100 font-black py-2.5 px-4 rounded-xl border border-red-100/50 flex items-center justify-center gap-1.5 text-xs uppercase tracking-wider transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Limpar Consultas
+          </button>
+        )}
+      </div>
+
+      {searchesLoading ? (
+        <div className="text-center py-12">
+          <span className="text-sm font-black text-gray-400 uppercase tracking-widest animate-pulse">Carregando buscas...</span>
+        </div>
+      ) : globalSearches.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <MapPin className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+          <span className="block text-base font-bold uppercase tracking-wider">Nenhuma consulta realizada pelos usuários recentemente.</span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="hidden md:table-header-group bg-gray-50 border-b border-gray-100">
+              <tr>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Termo Buscado</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Tipo de Serviço</th>
+                <th scope="col" className="px-6 py-4 text-left text-xs font-black text-gray-400 uppercase tracking-widest">Usuário</th>
+                <th scope="col" className="px-6 py-4 text-right text-xs font-black text-gray-400 uppercase tracking-widest">Data / Hora</th>
+              </tr>
+            </thead>
+            <tbody className="bg-transparent md:bg-white md:divide-y md:divide-gray-100">
+              {globalSearches.map((log) => (
+                <tr key={log.id} className="block md:table-row mb-6 md:mb-0 bg-white md:bg-transparent rounded-xl border md:border-0 border-gray-100 p-4 md:p-0 shadow-sm md:shadow-none hover:bg-gray-50/50 transition-colors">
+                  <td className="px-0 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell">
+                    <div className="flex justify-between items-center md:block">
+                      <span className="font-black text-gray-400 md:hidden text-[10px] uppercase tracking-wider">Busca</span>
+                      <div className="flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-amber-500" />
+                        <span className="text-base font-black text-gray-950 uppercase tracking-tight">{log.term}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-0 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell">
+                    <div className="flex justify-between items-center md:block">
+                      <span className="font-black text-gray-400 md:hidden text-[10px] uppercase tracking-wider">Tipo</span>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide border ${
+                        log.historyKey === 'fares'
+                          ? 'bg-amber-50 text-amber-700 border-amber-100'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                      }`}>
+                        {log.historyKey === 'fares' ? 'Tarifário Comum' : 'Viagem Longa'}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="px-0 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell">
+                    <div className="flex justify-between items-center md:block">
+                      <span className="font-black text-gray-400 md:hidden text-[10px] uppercase tracking-wider">Usuário</span>
+                      <div className="flex items-center gap-1.5 text-gray-700">
+                        <UserIcon className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-sm font-bold">{log.userEmail}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-0 py-2 md:px-6 md:py-4 whitespace-nowrap block md:table-cell text-right">
+                    <div className="flex justify-between items-center md:justify-end md:block">
+                      <span className="font-black text-gray-400 md:hidden text-[10px] uppercase tracking-wider">Data / Hora</span>
+                      <div className="flex items-center justify-end gap-1.5 text-gray-500 text-xs font-medium">
+                        <Clock className="w-3.5 h-3.5 text-gray-400 hidden sm:inline" />
+                        <span>
+                          {new Date(log.timestamp).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                          })} às {new Date(log.timestamp).toLocaleTimeString('pt-BR', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </div>
+);
 };
 
 export default UserManagement;

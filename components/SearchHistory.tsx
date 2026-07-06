@@ -1,11 +1,65 @@
 import React, { useEffect, useState } from 'react';
 import { Clock, Trash2, X, MapPin } from 'lucide-react';
+import { db } from '../services/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface SearchHistoryProps {
   historyKey: string; // 'fares' | 'long_trips'
   currentSearchTerm: string;
   onSelectSearch: (term: string) => void;
 }
+
+// Salva busca no Firestore para que o administrador possa visualizar
+export const saveSearchToFirestore = async (historyKey: string, term: string) => {
+  const trimmed = term.trim().toUpperCase();
+  if (!trimmed || trimmed.length < 3) return;
+
+  try {
+    let currentUserEmail = 'Anônimo';
+    try {
+      const stored = localStorage.getItem('taxi_app_current_user');
+      if (stored) {
+        const u = JSON.parse(stored);
+        if (u && u.email) {
+          currentUserEmail = u.email;
+        }
+      }
+    } catch (e) {}
+
+    const docRef = doc(db, 'data', 'global_searches_doc');
+    let searches: any[] = [];
+    try {
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && Array.isArray(data.searches)) {
+          searches = data.searches;
+        }
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar buscas globais:', e);
+    }
+
+    const newLog = {
+      id: `search-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      term: trimmed,
+      historyKey,
+      timestamp: new Date().toISOString(),
+      userEmail: currentUserEmail,
+    };
+
+    // Remove busca duplicada do mesmo termo pelo mesmo usuário para manter limpo, e limita a 50
+    const filtered = searches.filter(item => !(item.term === trimmed && item.userEmail === currentUserEmail));
+    const updated = [newLog, ...filtered].slice(0, 50);
+
+    await setDoc(docRef, {
+      searches: updated,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Erro ao salvar busca no Firestore:', error);
+  }
+};
 
 // Helper para outros componentes adicionarem buscas diretamente ao histórico
 export const addSearchToHistory = (historyKey: string, term: string) => {
@@ -28,6 +82,9 @@ export const addSearchToHistory = (historyKey: string, term: string) => {
   const updated = [trimmed, ...filtered].slice(0, 5);
   localStorage.setItem(localStorageKey, JSON.stringify(updated));
   
+  // Salva no Firestore também
+  saveSearchToFirestore(historyKey, trimmed);
+
   // Dispara um evento customizado para notificar o componente ativo a atualizar seu estado
   window.dispatchEvent(new Event('taxi_app_search_history_updated'));
 };
@@ -92,6 +149,7 @@ export const SearchHistory: React.FC<SearchHistoryProps> = ({
 
     const handler = setTimeout(() => {
       addToHistoryLocal(currentSearchTerm);
+      saveSearchToFirestore(historyKey, currentSearchTerm);
     }, 1200); // 1.2s de debounce para evitar salvar termos parciais
 
     return () => clearTimeout(handler);
