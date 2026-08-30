@@ -83,10 +83,18 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLoginSuccess }) => {
           </button>
         </form>
 
-        <div className="text-center mt-10 sm:mt-12 bg-gray-50/50 dark:bg-gray-900/50 -mx-8 sm:-mx-12 -mb-8 sm:-mb-12 p-6 border-t border-gray-100 dark:border-gray-700 rounded-b-[2.5rem]">
-          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-extrabold uppercase tracking-wider">
-            Para acessar, solicite seu cadastro ao administrador.
+        <div className="text-center mt-10 sm:mt-12 bg-gray-50/70 dark:bg-gray-900/70 -mx-8 sm:-mx-12 -mb-8 sm:-mb-12 p-6 border-t border-gray-100 dark:border-gray-700 rounded-b-[2.5rem]">
+          <p className="text-[11px] text-gray-600 dark:text-gray-300 font-extrabold uppercase tracking-wider mb-3">
+            Para acessar, solicitar alteração, inclusão ou suporte:
           </p>
+          <a
+            href="https://wa.me/5531998699742?text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20acesso%2C%20altera%C3%A7%C3%A3o%20ou%20suporte%20no%20aplicativo%20Tabela%20T%C3%A1xi."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider py-3 px-5 rounded-xl shadow-md transition-all w-full"
+          >
+            <span>Falar com Administrador: (31) 99869-9742</span>
+          </a>
         </div>
       </div>
     </div>

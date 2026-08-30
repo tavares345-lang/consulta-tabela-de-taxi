@@ -8,6 +8,8 @@ import { XIcon } from './icons/XIcon';
 import { UploadIcon } from './icons/UploadIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { SearchHistory, addSearchToHistory } from './SearchHistory';
+import { ADMIN_PHONE_DISPLAY, getWhatsAppLink } from './AdminContactBanner';
+import { MessageCircle } from 'lucide-react';
 
 interface LongTripModalProps {
   trip: LongTrip | null;
@@ -468,7 +470,22 @@ const LongTripCalculator: React.FC<LongTripCalculatorProps> = ({
                                 </tr>
                             )) : (
                                 <tr>
-                                    <td colSpan={isAdmin ? 4 : 3} className="p-32 text-center text-gray-400 text-lg font-black uppercase tracking-widest opacity-30 italic">Nenhum destino na tabela</td>
+                                    <td colSpan={isAdmin ? 4 : 3} className="py-16 px-4 text-center">
+                                        <div className="flex flex-col items-center max-w-md mx-auto">
+                                            <p className="text-lg font-black uppercase tracking-wider text-gray-700">Nenhuma Cidade Encontrada</p>
+                                            <p className="text-xs font-bold text-gray-400 mt-1 mb-5">Deseja calcular ou cadastrar uma cidade que não consta na lista?</p>
+                                            
+                                            <a
+                                                href={getWhatsAppLink(searchTerm ? `Olá! Gostaria de solicitar a inclusão da cidade "${searchTerm}" nas Viagens Longas da Tabela Táxi.` : undefined)}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider py-3 px-5 rounded-2xl shadow-lg transition-all"
+                                            >
+                                                <MessageCircle className="w-4 h-4" />
+                                                <span>Solicitar Inclusão ao Administrador: {ADMIN_PHONE_DISPLAY}</span>
+                                            </a>
+                                        </div>
+                                    </td>
                                 </tr>
                             )}
                         </tbody>

@@ -8,6 +8,8 @@ import { UploadIcon } from './icons/UploadIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { XIcon } from './icons/XIcon';
 import { SearchHistory, addSearchToHistory } from './SearchHistory';
+import { ADMIN_PHONE_DISPLAY, getWhatsAppLink } from './AdminContactBanner';
+import { MessageCircle, Phone } from 'lucide-react';
 
 interface FareModalProps {
   fare: Fare | null;
@@ -329,11 +331,21 @@ const FareTable: React.FC<FareTableProps> = ({
                     </tr>
                 )) : (
                     <tr>
-                      <td colSpan={isAdmin ? 5 : 4} className="p-32 text-center">
-                        <div className="flex flex-col items-center opacity-30">
-                          <svg className="w-20 h-20 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                          <p className="text-xl font-black uppercase tracking-[0.2em]">Nenhum Resultado</p>
-                          <p className="text-sm font-bold mt-2">Tente ajustar seus filtros ou busca</p>
+                      <td colSpan={isAdmin ? 5 : 4} className="py-16 px-4 text-center">
+                        <div className="flex flex-col items-center max-w-md mx-auto">
+                          <svg className="w-16 h-16 mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                          <p className="text-lg font-black uppercase tracking-wider text-gray-700">Nenhum Destino Encontrado</p>
+                          <p className="text-xs font-bold text-gray-400 mt-1 mb-5">Não encontrou o bairro, hotel ou destino que procurava?</p>
+                          
+                          <a
+                            href={getWhatsAppLink(searchTerm ? `Olá! Gostaria de solicitar a inclusão do destino "${searchTerm}" na Tabela Táxi.` : undefined)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs uppercase tracking-wider py-3 px-5 rounded-2xl shadow-lg transition-all"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            <span>Solicitar Inclusão ao Administrador: {ADMIN_PHONE_DISPLAY}</span>
+                          </a>
                         </div>
                       </td>
                     </tr>

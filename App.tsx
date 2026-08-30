@@ -6,6 +6,7 @@ import FareTable from './components/FareTable';
 import LongTripCalculator from './components/LongTripCalculator';
 import AuthPage from './components/AuthPage';
 import UserManagement from './components/UserManagement';
+import { AdminContactBanner } from './components/AdminContactBanner';
 import * as authService from './services/authService';
 import * as fareService from './services/fareService';
 import { db, auth } from './services/firebase';
@@ -683,11 +684,18 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* Barra de Contato do Administrador */}
+      <AdminContactBanner variant="bar" />
+
       <main className="p-4 sm:p-6 lg:p-10 max-w-7xl mx-auto">
         {renderActiveView()}
+        
+        {/* Card explicativo com telefone do Administrador para suporte/alterações */}
+        <AdminContactBanner variant="card" />
       </main>
       <footer className="text-center p-8 text-gray-400 text-sm font-bold uppercase tracking-widest">
         <p>&copy; {new Date().getFullYear()} TABELA TÁXI • CONSULTA RÁPIDA</p>
+        <p className="text-xs text-gray-400 mt-1 font-semibold">Contato do Administrador: (31) 99869-9742</p>
       </footer>
     </div>
   );
